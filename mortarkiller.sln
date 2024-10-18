@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.35325.158
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mortarkiller", "mortarkiller\mortarkiller.csproj", "{EC2DEC70-E2E0-4085-BBE3-E9D4ECC9B686}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EC2DEC70-E2E0-4085-BBE3-E9D4ECC9B686}.Debug|Any CPU.ActiveCfg = Release|Any CPU
+		{EC2DEC70-E2E0-4085-BBE3-E9D4ECC9B686}.Debug|Any CPU.Build.0 = Release|Any CPU
+		{EC2DEC70-E2E0-4085-BBE3-E9D4ECC9B686}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC2DEC70-E2E0-4085-BBE3-E9D4ECC9B686}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A65D9842-1EE4-4BED-B790-55DB87EA3E22}
+	EndGlobalSection
+EndGlobal

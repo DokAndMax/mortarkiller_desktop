@@ -7,3 +7,4 @@ C:\Users\Ashim\source\repos\mortarkiller\mortarkiller\obj\Debug\mortarkiller.csp
 C:\Users\Ashim\source\repos\mortarkiller\mortarkiller\obj\Debug\mortarkiller.csproj.CoreCompileInputs.cache
 C:\Users\Ashim\source\repos\mortarkiller\mortarkiller\obj\Debug\mortarkiller.exe
 C:\Users\Ashim\source\repos\mortarkiller\mortarkiller\obj\Debug\mortarkiller.pdb
+C:\Users\Ashim\source\repos\mortarkiller\mortarkiller\obj\Debug\mortarkiller.csproj.AssemblyReference.cache

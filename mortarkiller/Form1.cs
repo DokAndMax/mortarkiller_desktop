@@ -80,10 +80,10 @@ namespace mortarkiller
                 double ratio2 = height1 / (width1 / ratio1);
                 pixels = (height1 / 2) - System.Windows.Forms.Control.MousePosition.Y;
                 double fov = trackBar1.Value;
-                double vfov = Math.Atan(Math.Tan((fov / 2.0) / 180.0 * 3.14) * ratio2 / ratio1);
+                double vfov = Math.Atan(Math.Tan((fov / 2.0) / 180.0 * 3.14) * ratio2 / ratio1) * 2.0;
                 double angle = Math.Atan(Math.Tan(vfov / 2.0) / (height1 / 2.0) * pixels);
                 double elevation = Math.Tan(angle) * mdistance;
-                elevation = elevation * -2.23404255;
+                elevation = elevation * -1;
                 label6.Text = elevation.ToString();
                 var angles = new Dictionary<int, string>()
                 {

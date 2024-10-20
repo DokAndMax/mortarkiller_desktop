@@ -8,10 +8,24 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+
 namespace mortarkiller
 {
+    
     public partial class Form1 : Form
     {
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        enum KeyModifier
+        {
+            None = 0,
+            Alt = 1,
+            Control = 2,
+            Shift = 4,
+            WinKey = 8
+        }
         int c1x = 0;
         int c2x = 0;
         int c1y = 0;
@@ -27,65 +41,90 @@ namespace mortarkiller
         {
             InitializeComponent();
             this.KeyPreview = true;
+            RegisterHotKey(this.Handle, 5, (int)KeyModifier.Control, Keys.F.GetHashCode());
         }
 
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        private void Form1_Load(object sender, EventArgs e)
         {
-            
-            if (keyData == (Keys.Control | Keys.Q))
+
+        }
+
+        private void trackBar1_Scroll(object sender, EventArgs e)
+        {
+            label1.Text = trackBar1.Value.ToString();
+        }
+
+        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            System.Diagnostics.Process.Start("https://youtu.be/8PT1eohjcSA");
+        }
+        protected override void WndProc(ref Message m)
+        {
+            base.WndProc(ref m);
+
+            if (m.Msg == 0x0312)
             {
-                c1x = System.Windows.Forms.Control.MousePosition.X;
-                c1y = System.Windows.Forms.Control.MousePosition.Y;
-                return true;
-            }
-            if (keyData == (Keys.Control | Keys.W))
-            {
-                c2x = System.Windows.Forms.Control.MousePosition.X;
-                c2y = System.Windows.Forms.Control.MousePosition.Y;
-                if (c1x != 0 && c1y != 0)
+                /* Note that the three lines below are not needed if you only want to register one hotkey.
+                 * The below lines are useful in case you want to register multiple keys, which you can use a switch with the id as argument, or if you want to know which key/modifier was pressed for some particular reason. */
+
+                Keys key = (Keys)(((int)m.LParam >> 16) & 0xFFFF);                  // The key of the hotkey that was pressed.
+                KeyModifier modifier = (KeyModifier)((int)m.LParam & 0xFFFF);       // The modifier of the hotkey that was pressed.
+                int id = m.WParam.ToInt32();                                        // The id of the hotkey that was pressed.
+                if (id == 1)
                 {
-                    hndr = Math.Max(Math.Abs(c2y - c1y), Math.Abs(c2x - c1x));
+                    c1x = System.Windows.Forms.Control.MousePosition.X;
+                    c1y = System.Windows.Forms.Control.MousePosition.Y;
                 }
-                return true;
-            }
-            if (keyData == (Keys.Control | Keys.A))
-            {
-                sx = System.Windows.Forms.Control.MousePosition.X;
-                sy = System.Windows.Forms.Control.MousePosition.Y;
-                mdistance = Math.Round(Math.Sqrt(Convert.ToDouble(((tx - sx) * (tx - sx)) + ((ty - sy) * (ty - sy)))) / hndr * 100, 2);
-                label4.Text = mdistance.ToString();
-                return true;
-            }
-            if (keyData == (Keys.Control | Keys.S))
-            {
-                tx = System.Windows.Forms.Control.MousePosition.X;
-                ty = System.Windows.Forms.Control.MousePosition.Y;
-                mdistance = Math.Sqrt(Convert.ToDouble(((tx - sx) * (tx - sx)) + ((ty - sy) * (ty - sy)))) / hndr * 100;
-                label4.Text = mdistance.ToString();
-                return true;
-            }
-            if (keyData == (Keys.Control | Keys.F))
-            {
-                listView1.Items.Clear();
-                double g = 32;
-                double tune = -16;
-                double v0 = 151;
+                if (id == 2)
+                {
+                    c2x = System.Windows.Forms.Control.MousePosition.X;
+                    c2y = System.Windows.Forms.Control.MousePosition.Y;
+                    if (c1x != 0 && c1y != 0)
+                    {
+                        hndr = Math.Max(Math.Abs(c2y - c1y), Math.Abs(c2x - c1x));
+                    }
+                }
+                if (id == 3)
+                {
+                    sx = System.Windows.Forms.Control.MousePosition.X;
+                    sy = System.Windows.Forms.Control.MousePosition.Y;
+                    mdistance = Math.Round(Math.Sqrt(Convert.ToDouble(((tx - sx) * (tx - sx)) + ((ty - sy) * (ty - sy)))) / hndr * 100, 2);
+                    label4.Text = mdistance.ToString();
+                }
+                if (id == 4)
+                {
+                    tx = System.Windows.Forms.Control.MousePosition.X;
+                    ty = System.Windows.Forms.Control.MousePosition.Y;
+                    mdistance = Math.Sqrt(Convert.ToDouble(((tx - sx) * (tx - sx)) + ((ty - sy) * (ty - sy)))) / hndr * 100;
+                    label4.Text = mdistance.ToString();
+                }
+                if (id == 5)
+                {
+                    listView1.Items.Clear();
+                    double g = 32;
+                    double tune = -16;
+                    double v0 = 151;
 
 
 
 
-                int width1 = Screen.PrimaryScreen.Bounds.Width;
-                int height1 = Screen.PrimaryScreen.Bounds.Height;
-                double ratio1 = 16;
-                double ratio2 = height1 / (width1 / ratio1);
-                pixels = (height1 / 2) - System.Windows.Forms.Control.MousePosition.Y;
-                double fov = trackBar1.Value;
-                double vfov = Math.Atan(Math.Tan((fov / 2.0) / 180.0 * 3.14) * ratio2 / ratio1) * 2.0;
-                double angle = Math.Atan(Math.Tan(vfov / 2.0) / (height1 / 2.0) * pixels);
-                double elevation = Math.Tan(angle) * mdistance;
-                elevation = elevation * -1;
-                label6.Text = elevation.ToString();
-                var angles = new Dictionary<int, string>()
+                    int width1 = Screen.PrimaryScreen.Bounds.Width;
+                    int height1 = Screen.PrimaryScreen.Bounds.Height;
+                    double ratio1 = 16;
+                    double ratio2 = height1 / (width1 / ratio1);
+                    pixels = (height1 / 2) - System.Windows.Forms.Control.MousePosition.Y;
+                    double fov = trackBar1.Value;
+                    double vfov = Math.Atan(Math.Tan((fov / 2.0) / 180.0 * 3.14) * ratio2 / ratio1) * 2.0;
+                    double angle = Math.Atan(Math.Tan(vfov / 2.0) / (height1 / 2.0) * pixels);
+                    double elevation = Math.Tan(angle) * mdistance;
+                    elevation = elevation * -1;
+                    label6.Text = elevation.ToString();
+                    var angles = new Dictionary<int, string>()
                 {
                     { 855, "121"},
                     { 850, "133"},
@@ -170,49 +209,63 @@ namespace mortarkiller
                     { 455, "700"},
 
                 };
-                for (double i = 85.5; i >= 45.5; i-=0.5)
-                {
-                    double v0x = v0 * (Math.Cos(i / 180.0 * 3.14));
-                    double hmax = ((Math.Pow(v0, 2) * Math.Pow((Math.Sin(i / 180.0 * 3.14)), 2)) / (2.0 * g));
-                    hmax += tune;
-                    hmax += elevation;
-                    double x = Convert.ToInt32(angles[Convert.ToInt32(i*10)]) / 2.0;
-                    double t = 0.0;
-                    while (hmax >= 0)
+                    for (double i = 85.5; i >= 45.5; i -= 0.5)
                     {
-                        double vy = g * t;
-                        t += 0.01;
-                        x += (v0x * 0.01);
-                        hmax -= (vy * 0.01);
-                    }
-                    if (Math.Abs(x - mdistance) < 10)
-                    {
-                        listView1.Items.Add("Hit " + x.ToString() + "  Aim: " + angles[Convert.ToInt32(i * 10)]);
+                        double v0x = v0 * (Math.Cos(i / 180.0 * 3.14));
+                        double hmax = ((Math.Pow(v0, 2) * Math.Pow((Math.Sin(i / 180.0 * 3.14)), 2)) / (2.0 * g));
+                        hmax += tune;
+                        hmax += elevation;
+                        double x = Convert.ToInt32(angles[Convert.ToInt32(i * 10)]) / 2.0;
+                        double t = 0.0;
+                        while (hmax >= 0)
+                        {
+                            double vy = g * t;
+                            t += 0.01;
+                            x += (v0x * 0.01);
+                            hmax -= (vy * 0.01);
+                        }
+                        if (Math.Abs(x - mdistance) < 10)
+                        {
+                            listView1.Items.Add("Hit " + x.ToString() + "  Aim: " + angles[Convert.ToInt32(i * 10)]);
+                        }
+                        var windowInApplicationIsFocused = Form.ActiveForm != null;
+                        if (!windowInApplicationIsFocused)
+                        {
+                            this.WindowState = FormWindowState.Minimized;
+                            this.WindowState = FormWindowState.Normal;
+                        }
                     }
                 }
-                return true;
+                // do something
             }
-            return base.ProcessCmdKey(ref msg, keyData);
+        }
+        private void Form1_Closing(object sender, FormClosingEventArgs e)
+        {
+            UnregisterHotKey(this.Handle, 0);
+            UnregisterHotKey(this.Handle, 1);
+            UnregisterHotKey(this.Handle, 2);
+            UnregisterHotKey(this.Handle, 3);
+            UnregisterHotKey(this.Handle, 4);
+            UnregisterHotKey(this.Handle, 5);
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
-            
-        }
-
-        private void trackBar1_Scroll(object sender, EventArgs e)
-        {
-            label1.Text = trackBar1.Value.ToString();
-        }
-
-        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            System.Diagnostics.Process.Start("https://youtu.be/8PT1eohjcSA");
+            if (checkBox1.Checked){
+                RegisterHotKey(this.Handle, 1, (int)KeyModifier.Control, Keys.Q.GetHashCode());
+                RegisterHotKey(this.Handle, 2, (int)KeyModifier.Control, Keys.W.GetHashCode());
+                RegisterHotKey(this.Handle, 3, (int)KeyModifier.Control, Keys.A.GetHashCode());
+                RegisterHotKey(this.Handle, 4, (int)KeyModifier.Control, Keys.S.GetHashCode());
+            }
+            else
+            {
+                UnregisterHotKey(this.Handle, 0);
+                UnregisterHotKey(this.Handle, 1);
+                UnregisterHotKey(this.Handle, 2);
+                UnregisterHotKey(this.Handle, 3);
+                UnregisterHotKey(this.Handle, 4);
+                //Application.Restart();
+            }
         }
     }
 }

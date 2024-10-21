@@ -94,20 +94,21 @@ namespace mortarkiller
                     sx = System.Windows.Forms.Control.MousePosition.X;
                     sy = System.Windows.Forms.Control.MousePosition.Y;
                     mdistance = Math.Round(Math.Sqrt(Convert.ToDouble(((tx - sx) * (tx - sx)) + ((ty - sy) * (ty - sy)))) / hndr * 100, 2);
-                    label4.Text = mdistance.ToString();
+                    label4.Text = mdistance.ToString("#.##");
                 }
                 if (id == 4)
                 {
                     tx = System.Windows.Forms.Control.MousePosition.X;
                     ty = System.Windows.Forms.Control.MousePosition.Y;
                     mdistance = Math.Sqrt(Convert.ToDouble(((tx - sx) * (tx - sx)) + ((ty - sy) * (ty - sy)))) / hndr * 100;
-                    label4.Text = mdistance.ToString();
+                    label4.Text = mdistance.ToString("#.##");
                 }
                 if (id == 5)
                 {
+
                     listView1.Items.Clear();
                     double g = 32;
-                    double tune = -16;
+                    double tune = -17;
                     double v0 = 151;
 
 
@@ -123,7 +124,7 @@ namespace mortarkiller
                     double angle = Math.Atan(Math.Tan(vfov / 2.0) / (height1 / 2.0) * pixels);
                     double elevation = Math.Tan(angle) * mdistance;
                     elevation = elevation * -1;
-                    label6.Text = elevation.ToString();
+                    label6.Text = elevation.ToString("#.##");
                     var angles = new Dictionary<int, string>()
                 {
                     { 855, "121"},
@@ -209,6 +210,14 @@ namespace mortarkiller
                     { 455, "700"},
 
                 };
+                    int ctr = 0;
+                    var real = new Dictionary<string, double>()
+                    {
+
+                    };
+                    var solutions = new Dictionary<double, string>();
+                    real.Clear();
+                    solutions.Clear();
                     for (double i = 85.5; i >= 45.5; i -= 0.5)
                     {
                         double v0x = v0 * (Math.Cos(i / 180.0 * 3.14));
@@ -226,14 +235,44 @@ namespace mortarkiller
                         }
                         if (Math.Abs(x - mdistance) < 10)
                         {
-                            listView1.Items.Add("Hit " + x.ToString() + "  Aim: " + angles[Convert.ToInt32(i * 10)]);
+
+                            //temp.Item1 = angles[Convert.ToInt32(i * 10)];
+                            solutions.Add(Math.Abs(x - mdistance), angles[Convert.ToInt32(i * 10)]);
+                            real.Add(angles[Convert.ToInt32(i * 10)], x);
+                            solutions = solutions.OrderBy(obj => obj.Key).ToDictionary(obj => obj.Key, obj => obj.Value);
+                            ctr++;
+                            //listView1.Items.Add("Hit " + x.ToString() + "  Aim: " + angles[Convert.ToInt32(i * 10)]);
                         }
-                        var windowInApplicationIsFocused = Form.ActiveForm != null;
-                        if (!windowInApplicationIsFocused)
+                    }
+                    var windowInApplicationIsFocused = Form.ActiveForm != null;
+                    if (!windowInApplicationIsFocused)
+                    {
+                        this.WindowState = FormWindowState.Minimized;
+                        this.WindowState = FormWindowState.Normal;
+                    }
+                    foreach (var item in solutions)
+                    {
+                        real[item.Value] = Math.Round(real[item.Value], 2);
+                        mdistance = Math.Round(mdistance, 2);
+                        if (real[item.Value] > mdistance)
                         {
-                            this.WindowState = FormWindowState.Minimized;
-                            this.WindowState = FormWindowState.Normal;
+                            listView1.Items.Add(Math.Round(Math.Abs(real[item.Value] - mdistance), 2).ToString() + "m Overshoot.  Aim: " + item.Value);
                         }
+                        else if (real[item.Value] < mdistance)
+                        {
+                            listView1.Items.Add(Math.Round(Math.Abs(real[item.Value] - mdistance), 2).ToString() + "m Short.  Aim: " + item.Value);
+                        }
+                        else
+                        {
+                            listView1.Items.Add("Precise Hit. Aim: " + item.Value);
+                        }
+                    }
+                    if (listView1.Items.Count != 0)
+                    {
+                        listView1.Items[0] = new ListViewItem(listView1.Items[0].Text)
+                        {
+                            ForeColor = Color.Green
+                        };
                     }
                 }
                 // do something

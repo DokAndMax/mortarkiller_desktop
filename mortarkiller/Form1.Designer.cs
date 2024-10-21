@@ -84,7 +84,7 @@ namespace mortarkiller
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(10, 221);
+            this.label4.Location = new System.Drawing.Point(134, 204);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(0, 17);
             this.label4.TabIndex = 13;
@@ -101,7 +101,7 @@ namespace mortarkiller
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(86, 176);
+            this.label6.Location = new System.Drawing.Point(134, 176);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(0, 17);
             this.label6.TabIndex = 12;

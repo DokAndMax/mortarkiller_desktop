@@ -12,7 +12,7 @@ Select your FOV in the app. 103 gives you the most ability, so just use that in-
 Use borderless screen mode in-game.
 
 When you want to prime the app, bring it up with ctrl + F and enable it to read the rest of the hotkeys.
-This will block these keys system-wide. You can also  stop this by unchecking the box.
+This will block these key combos (ctrl+a, ctr+q..., +w, +s) system-wide. You can also  stop this by unchecking the box.
 but ctrl+F will work always. It brings up the box over pubg automatically.
 
 

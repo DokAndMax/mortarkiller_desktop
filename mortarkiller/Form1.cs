@@ -47,10 +47,24 @@ namespace mortarkiller
             this.KeyPreview = true;
             RegisterHotKey(this.Handle, 5, (int)KeyModifier.Control, Keys.F.GetHashCode());
         }
-
+        void pop()
+        {
+            var windowInApplicationIsFocused = Form.ActiveForm != null;
+            if (!windowInApplicationIsFocused)
+            {
+                this.WindowState = FormWindowState.Minimized;
+                this.WindowState = FormWindowState.Normal;
+            }
+        }
         private void Form1_Load(object sender, EventArgs e)
         {
-
+            listView1.Clear();
+            listView1.Items.Add("SET MAP SCALE! LCtrl+Q, LCtrl+W");
+            listView1.Items[0] = new ListViewItem(listView1.Items[0].Text)
+            {
+                ForeColor = Color.DarkRed
+            };
+            listView1.Items.Add("KEYBINDS NOT ENABLED!");
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
@@ -83,16 +97,28 @@ namespace mortarkiller
                 {
                     c1x = System.Windows.Forms.Control.MousePosition.X;
                     c1y = System.Windows.Forms.Control.MousePosition.Y;
+                    RegisterHotKey(this.Handle, 2, (int)KeyModifier.Control, Keys.W.GetHashCode());
                     setq = true;
                 }
                 if (id == 2)
                 {
                     c2x = System.Windows.Forms.Control.MousePosition.X;
                     c2y = System.Windows.Forms.Control.MousePosition.Y;
-                    setw = true;
-                    if (c1x != 0 && c1y != 0)
+                    if (setq)
                     {
-                        hndr = Math.Max(Math.Abs(c2y - c1y), Math.Abs(c2x - c1x));
+                        setw = true;
+                        mdistance = 0;
+                        seta = false;
+                        sets = false;
+                        label4.Text = "";
+                        listView1.Items.Clear();
+                        UnregisterHotKey(this.Handle, 2);
+                        listView1.Items.Add("Set distance now Ctrl+A, Ctrl+S");
+                        setq = false;
+                        if (c1x != 0 && c1y != 0)
+                        {
+                            hndr = Math.Max(Math.Abs(c2y - c1y), Math.Abs(c2x - c1x));
+                        }
                     }
                 }
                 if (id == 3)
@@ -100,8 +126,10 @@ namespace mortarkiller
                     sx = System.Windows.Forms.Control.MousePosition.X;
                     sy = System.Windows.Forms.Control.MousePosition.Y;
                     seta = true;
-                    if (setw && setq && sets)
+                    if (setw && sets)
                     {
+                        listView1.Items.Clear();
+                        listView1.Items.Add("Now use cursor and Ctrl+F to input angle");
                         mdistance = Math.Round(Math.Sqrt(Convert.ToDouble(((tx - sx) * (tx - sx)) + ((ty - sy) * (ty - sy)))) / hndr * 100, 2);
                         label4.Text = mdistance.ToString("#.##");
                     }
@@ -111,8 +139,10 @@ namespace mortarkiller
                     tx = System.Windows.Forms.Control.MousePosition.X;
                     ty = System.Windows.Forms.Control.MousePosition.Y;
                     sets = true;
-                    if (setw && setq && seta)
+                    if (setw && seta)
                     {
+                        listView1.Items.Clear();
+                        listView1.Items.Add("Now use cursor and Ctrl+F to input angle");
                         mdistance = Math.Sqrt(Convert.ToDouble(((tx - sx) * (tx - sx)) + ((ty - sy) * (ty - sy)))) / hndr * 100;
                         label4.Text = mdistance.ToString("#.##");
                     }
@@ -133,23 +163,13 @@ namespace mortarkiller
                     double g = 32;
                     double tune = -17;
                     double v0 = 151;
-
-
-
-
                     int width1 = Screen.PrimaryScreen.Bounds.Width;
                     int height1 = Screen.PrimaryScreen.Bounds.Height;
                     double ratio1 = 16;
                     double ratio2 = height1 / (width1 / ratio1);
-                    var windowInApplicationIsFocused = Form.ActiveForm != null;
-                    if (!windowInApplicationIsFocused)
+                    pop();
+                    if (seta && sets && setw)
                     {
-                        this.WindowState = FormWindowState.Minimized;
-                        this.WindowState = FormWindowState.Normal;
-                    }
-                    if (seta && sets && setw && setq)
-                    {
-
                         pixels = (height1 / 2) - System.Windows.Forms.Control.MousePosition.Y;
                         double fov = trackBar1.Value;
                         double vfov = Math.Atan(Math.Tan((fov / 2.0) / 180.0 * 3.14) * ratio2 / ratio1) * 2.0;
@@ -259,7 +279,7 @@ namespace mortarkiller
                             }
                             if (Math.Abs(x - mdistance) < 10)
                             {
-
+                                label8.Text = ((t + 2.150 + (mdistance / (2 * v0x))).ToString("#.###"));
                                 //temp.Item1 = angles[Convert.ToInt32(i * 10)];
                                 
                                 if (i*10 == 455)
@@ -316,6 +336,49 @@ namespace mortarkiller
                                 ForeColor = Color.Green
                             };
                         }
+                        else
+                        {
+                            listView1.Items.Add("NO FIRING SOLUTION! CANT HIT");
+                        }
+                        if (!checkBox1.Checked)
+                        {
+                            listView1.Clear();
+                            listView1.Items.Add("DISTANCE NOT SET!");
+                            listView1.Items.Add("KEYBINDS NOT ENABLED!");
+                            listView1.Items[0] = new ListViewItem(listView1.Items[0].Text)
+                            {
+                                ForeColor = Color.DarkRed
+                            };
+                            listView1.Items[1] = new ListViewItem(listView1.Items[1].Text)
+                            {
+                                ForeColor = Color.DarkOrange
+                            };
+                        }
+                    }
+                    else
+                    {
+                        if (!setw)
+                        {
+                            listView1.Clear();
+                            listView1.Items.Add("SET MAP SCALE! LCtrl+Q, LCtrl+W");
+                            listView1.Items[0] = new ListViewItem(listView1.Items[0].Text)
+                            {
+                                ForeColor = Color.DarkRed
+                            };
+                        }
+                        else
+                        {
+                            listView1.Clear();
+                            listView1.Items.Add("DISTANCE NOT SET!");
+                            listView1.Items[0] = new ListViewItem(listView1.Items[0].Text)
+                            {
+                                ForeColor = Color.DarkRed
+                            };
+                        }
+                        if (!checkBox1.Checked)
+                        {
+                            listView1.Items.Add("KEYBINDS NOT ENABLED!");
+                        }
                     }
                 }
                 // do something
@@ -324,7 +387,7 @@ namespace mortarkiller
         private void Form1_Closing(object sender, FormClosingEventArgs e)
         {
             UnregisterHotKey(this.Handle, 1);
-            UnregisterHotKey(this.Handle, 2);
+            //UnregisterHotKey(this.Handle, 2);
             UnregisterHotKey(this.Handle, 3);
             UnregisterHotKey(this.Handle, 4);
             UnregisterHotKey(this.Handle, 5);
@@ -334,18 +397,35 @@ namespace mortarkiller
         {
             if (checkBox1.Checked){
                 RegisterHotKey(this.Handle, 1, (int)KeyModifier.Control, Keys.Q.GetHashCode());
-                RegisterHotKey(this.Handle, 2, (int)KeyModifier.Control, Keys.W.GetHashCode());
+                //RegisterHotKey(this.Handle, 2, (int)KeyModifier.Control, Keys.W.GetHashCode());
                 RegisterHotKey(this.Handle, 3, (int)KeyModifier.Control, Keys.A.GetHashCode());
                 RegisterHotKey(this.Handle, 4, (int)KeyModifier.Control, Keys.S.GetHashCode());
+
+                listView1.Items.RemoveAt(listView1.Items.Count - 1);
             }
             else
             {
                 UnregisterHotKey(this.Handle, 1);
-                UnregisterHotKey(this.Handle, 2);
+                //UnregisterHotKey(this.Handle, 2);
                 UnregisterHotKey(this.Handle, 3);
                 UnregisterHotKey(this.Handle, 4);
+                listView1.Clear();
+                mdistance = 0;
+                sets = false;
+                label4.Text = "";
+                listView1.Items.Add("DISTANCE NOT SET!");
+                listView1.Items[0] = new ListViewItem(listView1.Items[0].Text)
+                {
+                    ForeColor = Color.DarkRed
+                };
+                listView1.Items.Add("KEYBINDS NOT ENABLED!");
+                listView1.Items[0] = new ListViewItem(listView1.Items[0].Text)
+                {
+                    ForeColor = Color.DarkRed
+                };
                 //Application.Restart();
             }
         }
+
     }
 }

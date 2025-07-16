@@ -1,4 +1,4 @@
-﻿using System;
+e﻿using System;
 using System.Net.Http;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,7 +15,7 @@ namespace WINWORD
 {
     public partial class Form1 : Form
     {
-        private const string MotdUrl = "http://5.61.47.45:9000/motd.txt";
+        private const string MotdUrl = "file_url_lol";
         private static readonly HttpClient client = new HttpClient();
         //system wide hotkey code I stole
         [System.Runtime.InteropServices.DllImport("user32.dll")]

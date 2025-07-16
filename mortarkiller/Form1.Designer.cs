@@ -1,4 +1,4 @@
-﻿
+
 namespace mortarkiller
 {
     partial class Form1
@@ -38,20 +38,20 @@ namespace mortarkiller
             this.label5 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.listView1 = new System.Windows.Forms.ListView();
-            this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.label7 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
             this.label10 = new System.Windows.Forms.Label();
             this.label11 = new System.Windows.Forms.Label();
+            this.motdTextBox = new System.Windows.Forms.RichTextBox();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             this.SuspendLayout();
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(8, 63);
+            this.label3.Location = new System.Drawing.Point(8, 104);
             this.label3.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(71, 13);
@@ -60,7 +60,7 @@ namespace mortarkiller
             // 
             // trackBar1
             // 
-            this.trackBar1.Location = new System.Drawing.Point(10, 88);
+            this.trackBar1.Location = new System.Drawing.Point(10, 129);
             this.trackBar1.Margin = new System.Windows.Forms.Padding(2);
             this.trackBar1.Maximum = 103;
             this.trackBar1.Minimum = 80;
@@ -73,7 +73,7 @@ namespace mortarkiller
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(66, 119);
+            this.label1.Location = new System.Drawing.Point(66, 160);
             this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(25, 13);
@@ -83,7 +83,7 @@ namespace mortarkiller
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(8, 166);
+            this.label2.Location = new System.Drawing.Point(8, 207);
             this.label2.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(90, 13);
@@ -93,7 +93,7 @@ namespace mortarkiller
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(100, 166);
+            this.label4.Location = new System.Drawing.Point(100, 207);
             this.label4.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(0, 13);
@@ -102,7 +102,7 @@ namespace mortarkiller
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(8, 143);
+            this.label5.Location = new System.Drawing.Point(8, 184);
             this.label5.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(54, 13);
@@ -112,7 +112,7 @@ namespace mortarkiller
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(100, 143);
+            this.label6.Location = new System.Drawing.Point(100, 184);
             this.label6.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(0, 13);
@@ -121,7 +121,7 @@ namespace mortarkiller
             // listView1
             // 
             this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(7, 196);
+            this.listView1.Location = new System.Drawing.Point(11, 237);
             this.listView1.Margin = new System.Windows.Forms.Padding(2);
             this.listView1.Name = "listView1";
             this.listView1.Size = new System.Drawing.Size(189, 144);
@@ -130,22 +130,10 @@ namespace mortarkiller
             this.listView1.View = System.Windows.Forms.View.List;
             this.listView1.SelectedIndexChanged += new System.EventHandler(this.listView1_SelectedIndexChanged);
             // 
-            // linkLabel1
-            // 
-            this.linkLabel1.AutoSize = true;
-            this.linkLabel1.Location = new System.Drawing.Point(10, 11);
-            this.linkLabel1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.linkLabel1.Name = "linkLabel1";
-            this.linkLabel1.Size = new System.Drawing.Size(95, 13);
-            this.linkLabel1.TabIndex = 15;
-            this.linkLabel1.TabStop = true;
-            this.linkLabel1.Text = "How do I use this?";
-            this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
-            // 
             // checkBox1
             // 
             this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(7, 35);
+            this.checkBox1.Location = new System.Drawing.Point(11, 76);
             this.checkBox1.Margin = new System.Windows.Forms.Padding(2);
             this.checkBox1.Name = "checkBox1";
             this.checkBox1.Size = new System.Drawing.Size(169, 17);
@@ -157,7 +145,7 @@ namespace mortarkiller
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(8, 342);
+            this.label7.Location = new System.Drawing.Point(12, 383);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(145, 13);
             this.label7.TabIndex = 17;
@@ -166,7 +154,7 @@ namespace mortarkiller
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(153, 342);
+            this.label8.Location = new System.Drawing.Point(157, 383);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(0, 13);
             this.label8.TabIndex = 18;
@@ -174,7 +162,7 @@ namespace mortarkiller
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(10, 365);
+            this.label9.Location = new System.Drawing.Point(14, 406);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(131, 13);
             this.label9.TabIndex = 19;
@@ -183,7 +171,7 @@ namespace mortarkiller
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(10, 378);
+            this.label10.Location = new System.Drawing.Point(14, 419);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(125, 13);
             this.label10.TabIndex = 19;
@@ -192,24 +180,32 @@ namespace mortarkiller
             // label11
             // 
             this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(10, 391);
+            this.label11.Location = new System.Drawing.Point(14, 432);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(168, 13);
             this.label11.TabIndex = 19;
             this.label11.Text = "for zeroing 0 (hipfire), 60, 100, 150";
             // 
+            // motdTextBox
+            // 
+            this.motdTextBox.Location = new System.Drawing.Point(-1, -1);
+            this.motdTextBox.Name = "motdTextBox";
+            this.motdTextBox.Size = new System.Drawing.Size(211, 72);
+            this.motdTextBox.TabIndex = 20;
+            this.motdTextBox.Text = "";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(204, 417);
+            this.ClientSize = new System.Drawing.Size(208, 450);
+            this.Controls.Add(this.motdTextBox);
             this.Controls.Add(this.label10);
             this.Controls.Add(this.label11);
             this.Controls.Add(this.label9);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.checkBox1);
-            this.Controls.Add(this.linkLabel1);
             this.Controls.Add(this.listView1);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label6);
@@ -238,13 +234,12 @@ namespace mortarkiller
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.ListView listView1;
-        private System.Windows.Forms.LinkLabel linkLabel1;
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.RichTextBox motdTextBox;
     }
 }
-

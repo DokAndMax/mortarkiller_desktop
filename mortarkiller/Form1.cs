@@ -11,7 +11,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.Design;
 
 
-namespace WINWORD
+namespace mortarkiller
 {
     public partial class Form1 : Form
     {

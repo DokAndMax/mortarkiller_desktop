@@ -1,9 +1,9 @@
 {
-  "score": -1079.8667878012643,
-  "matched": 31,
+  "score": -1118.8667878012643,
+  "matched": 32,
   "missing": 0,
   "false_positive": 0,
-  "mean_distance": 5.165587490281799,
+  "mean_distance": 5.035412881210492,
   "median_distance": 1,
   "templates_dir": "best_pin_masks",
   "parameters": {
@@ -13,13 +13,13 @@
     "close_size": 5,
     "erode_iter": 0,
     "dilate_iter": 0,
-    "min_area_ratio": 6.25E-06,
+    "min_area_ratio": 1E-05,
     "max_area_ratio": 0.015384615,
     "tpl_min_score": 0.5,
     "aspect_min": 1.05,
     "nms_radius": 22,
-    "tpl_edge_weight": 0.7,
-    "tpl_build_fill_frac": 0.5,
+    "tpl_edge_weight": 0.75,
+    "tpl_build_fill_frac": 0.55,
     "tpl_build_edge_frac": 0.45,
     "close_if_components_le": 1,
     "colors": [
@@ -48,8 +48,8 @@
         "color": "Blue",
         "hue_center": 101,
         "hue_tol": 8,
-        "sat_min": 86,
-        "val_min": 121
+        "sat_min": 96,
+        "val_min": 131
       }
     ]
   }

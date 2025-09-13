@@ -1,0 +1,128 @@
+{
+  "stage1_iterations": 2500,
+  "stage2_iterations": 2000,
+  "threads": 0,
+  "debug": {
+    "enabled": true,
+    "dump_dir": "output/debug",
+	"dump_images": [ "screenshot2/screenshot.png", "screenshot2/screenshot1.png","screenshot2/screenshot2.png","screenshot2/screenshot3.png","screenshot2/screenshot4.png","screenshot2/screenshot5.png", "screenshot2/screenshot6.png", "screenshot2/screenshot7.png", "screenshot2/screenshot8.png", "screenshot2/screenshot9.png", "screenshot2/screenshot10.png", "screenshot2/screenshot11.png", "screenshot2/screenshot12.png", "screenshot2/screenshot13.png", "screenshot2/screenshot14.png", "screenshot2/screenshot15.png", "screenshot2/screenshot16.png", "screenshot2/screenshot17.png", "screenshot2/screenshot18.png", "screenshot2/screenshot19.png", "screenshot2/screenshot20.png", "screenshot2/screenshot21.png", "screenshot2/screenshot22.png"],
+	"dump_colors": [ "Yellow", "Green", "Orange", "Blue" ],
+	"save_stages": true,
+	"save_rejected_contours": true,
+	"max_rejected_per_color": 100,
+	"tile_composite": true,
+	"save_hsv_channels": true
+  },
+  "items": [
+	{
+		"path": "screenshot2/screenshot.png",
+		"gt_players": [ {"x": 185, "y": 183} ],
+		"gt_pins": [ {"x": 1485, "y": 859} ]
+	},
+	{
+		"path": "screenshot2/screenshot2.png",
+		"gt_players": [ {"x": 646, "y": 228} ],
+		"gt_pins": [ {"x": 855, "y": 464} ]
+	},
+	{
+		"path": "screenshot2/screenshot3.png",
+		"gt_players": [ {"x": 1491, "y": 428}, {"x": 1513, "y": 370}, {"x": 1548, "y": 334}, {"x": 1624, "y": 210} ],
+		"gt_pins": [ {"x": 1277, "y": 412}, {"x": 951, "y": 840} ]
+	},
+	{
+		"path": "screenshot2/screenshot4.png",
+		"gt_players": [ {"x": 873, "y": 625}, {"x": 876, "y": 500}, {"x": 929, "y": 580}, {"x": 965, "y": 540} ],
+		"gt_pins": [ {"x": 844, "y": 639}, {"x": 859, "y": 580}, {"x": 950, "y": 502}, {"x": 1051, "y": 274} ]
+	},
+	{
+		"path": "screenshot2/screenshot5.png",
+		"gt_players": [ {"x": 820, "y": 621}, {"x": 949, "y": 482}, {"x": 938, "y": 456}, {"x": 928, "y": 404} ],
+		"gt_pins": [ {"x": 746, "y": 835}, {"x": 709, "y": 786}, {"x": 619, "y": 900} ]
+	},
+	{
+		"path": "screenshot2/screenshot6.png",
+		"gt_players": [ {"x": 1196, "y": 764} ],
+		"gt_pins": [ {"x": 1315, "y": 253} ]
+	},
+	{
+		"path": "screenshot2/screenshot7.png",
+		"gt_players": [ {"x": 1054, "y": 806} ],
+		"gt_pins": [ {"x": 1126, "y": 307}, {"x": 1030, "y": 132} ]
+	},
+	{
+		"path": "screenshot2/screenshot8.png",
+		"gt_players": [ {"x": 1061, "y": 821} ],
+		"gt_pins": [ {"x": 1288, "y": 136} ]
+	},
+	{
+		"path": "screenshot2/screenshot9.png",
+		"gt_players": [ {"x": 1223, "y": 471} ],
+		"gt_pins": [ {"x": 906, "y": 429} ]
+	},
+	{
+		"path": "screenshot2/screenshot10.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 77, "y": 384} ]
+	},
+	{
+		"path": "screenshot2/screenshot11.png",
+		"gt_players": [ {"x": 779, "y": 671} ],
+		"gt_pins": [ {"x": 1604, "y": 394} ]
+	},
+	{
+		"path": "screenshot2/screenshot12.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 967, "y": 378} ]
+	},
+	{
+		"path": "screenshot2/screenshot13.png",
+		"gt_players": [ {"x": 600, "y": 812} ],
+		"gt_pins": [ {"x": 990, "y": 309} ]
+	},
+	{
+		"path": "screenshot2/screenshot14.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 957, "y": 377} ]
+	},
+	{
+		"path": "screenshot2/screenshot15.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 959, "y": 520} ]
+	},
+	{
+		"path": "screenshot2/screenshot16.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 967, "y": 391} ]
+	},
+	{
+		"path": "screenshot2/screenshot17.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 963, "y": 382} ]
+	},
+	{
+		"path": "screenshot2/screenshot18.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 956, "y": 525} ]
+	},
+	{
+		"path": "screenshot2/screenshot19.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 958, "y": 412} ]
+	},
+	{
+		"path": "screenshot2/screenshot20.png",
+		"gt_players": [ {"x": 505, "y": 554}, {"x": 505, "y": 613} ],
+		"gt_pins": [ {"x": 878, "y": 424} ]
+	},
+	{
+		"path": "screenshot2/screenshot21.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 959, "y": 566}, {"x": 1312, "y": 533} ]
+	},
+	{
+		"path": "screenshot2/screenshot22.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 958, "y": 521} ]
+	}
+  ]
+}

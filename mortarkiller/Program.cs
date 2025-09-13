@@ -1,23 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using WinFormsApp1;
 
-namespace mortarkiller
+namespace mortarkiller;
+
+static class Program
 {
-    static class Program
+    /// <summary>
+    /// Главная точка входа для приложения.
+    /// </summary>
+    [STAThread]
+    static void Main()
     {
-        /// <summary>
-        /// Главная точка входа для приложения.
-        /// </summary>
-        [STAThread]
-        static void Main()
-        {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
-    
-        }
+        //ProgramUnified.Run([.. Environment.GetCommandLineArgs().Skip(1)]).GetAwaiter().GetResult();
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+        Application.Run(new Form1());
     }
 }

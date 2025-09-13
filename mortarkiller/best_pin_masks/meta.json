@@ -1,0 +1,7 @@
+{
+  "mode": "single",
+  "fill": "output\\best_pin_masks\\common_fill.png",
+  "edge": "output\\best_pin_masks\\common_edge.png",
+  "canon_w": 76,
+  "canon_h": 96
+}

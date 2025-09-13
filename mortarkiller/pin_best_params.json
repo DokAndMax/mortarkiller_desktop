@@ -1,9 +1,9 @@
 {
-  "score": -1040.8667878012643,
-  "matched": 30,
+  "score": -1079.8667878012643,
+  "matched": 31,
   "missing": 0,
   "false_positive": 0,
-  "mean_distance": 5.304440406624525,
+  "mean_distance": 5.165587490281799,
   "median_distance": 1,
   "templates_dir": "best_pin_masks",
   "parameters": {
@@ -14,7 +14,7 @@
     "erode_iter": 0,
     "dilate_iter": 0,
     "min_area_ratio": 6.25E-06,
-    "max_area_ratio": 0.02,
+    "max_area_ratio": 0.015384615,
     "tpl_min_score": 0.5,
     "aspect_min": 1.05,
     "nms_radius": 22,
@@ -48,7 +48,7 @@
         "color": "Blue",
         "hue_center": 101,
         "hue_tol": 8,
-        "sat_min": 106,
+        "sat_min": 86,
         "val_min": 121
       }
     ]

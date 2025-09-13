@@ -5,7 +5,7 @@
   "debug": {
     "enabled": true,
     "dump_dir": "output/debug",
-	"dump_images": [ "screenshot2/screenshot.png", "screenshot2/screenshot1.png","screenshot2/screenshot2.png","screenshot2/screenshot3.png","screenshot2/screenshot4.png","screenshot2/screenshot5.png", "screenshot2/screenshot6.png", "screenshot2/screenshot7.png", "screenshot2/screenshot8.png", "screenshot2/screenshot9.png", "screenshot2/screenshot10.png", "screenshot2/screenshot11.png", "screenshot2/screenshot12.png", "screenshot2/screenshot13.png", "screenshot2/screenshot14.png", "screenshot2/screenshot15.png", "screenshot2/screenshot16.png", "screenshot2/screenshot17.png", "screenshot2/screenshot18.png", "screenshot2/screenshot19.png", "screenshot2/screenshot20.png", "screenshot2/screenshot21.png", "screenshot2/screenshot22.png"],
+	"dump_images": [ "screenshot2/screenshot.png", "screenshot2/screenshot1.png","screenshot2/screenshot2.png","screenshot2/screenshot3.png","screenshot2/screenshot4.png","screenshot2/screenshot5.png", "screenshot2/screenshot6.png", "screenshot2/screenshot7.png", "screenshot2/screenshot8.png", "screenshot2/screenshot9.png", "screenshot2/screenshot10.png", "screenshot2/screenshot11.png", "screenshot2/screenshot12.png", "screenshot2/screenshot13.png", "screenshot2/screenshot14.png", "screenshot2/screenshot15.png", "screenshot2/screenshot16.png", "screenshot2/screenshot17.png", "screenshot2/screenshot18.png", "screenshot2/screenshot19.png", "screenshot2/screenshot20.png", "screenshot2/screenshot21.png", "screenshot2/screenshot22.png", "screenshot2/screenshot23.png"],
 	"dump_colors": [ "Yellow", "Green", "Orange", "Blue" ],
 	"save_stages": true,
 	"save_rejected_contours": true,
@@ -123,6 +123,11 @@
 		"path": "screenshot2/screenshot22.png",
 		"gt_players": [ ],
 		"gt_pins": [ {"x": 958, "y": 521} ]
+	},
+	{
+		"path": "screenshot2/screenshot23.png",
+		"gt_players": [ ],
+		"gt_pins": [ {"x": 957, "y": 461} ]
 	}
   ]
 }

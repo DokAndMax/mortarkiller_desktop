@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
+using System.Speech.Synthesis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Windows.Forms.Design;
+using static System.Net.Mime.MediaTypeNames;
 
 
 namespace mortarkiller;
@@ -157,6 +156,10 @@ public partial class Form1 : Form
     private LiveMode? _playerLive;
 
     private AutoMortarRunner? _auto;
+
+    // TTS для ручного режиму
+    private readonly SpeechSynthesizer _tts = new();
+
     public Form1()
     {
         //the hotkey to open the program and also to calculate elevation
@@ -167,19 +170,11 @@ public partial class Form1 : Form
     }
 
     //become the active window
-    bool pop()
+    private void pop()
     {
-        var windowInApplicationIsFocused = Form.ActiveForm != null;
-        if (!windowInApplicationIsFocused)
-        {
-            this.WindowState = FormWindowState.Minimized;
-            this.WindowState = FormWindowState.Normal;
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        // просто підняти вікно (логіка активації така сама, як була)
+        this.WindowState = FormWindowState.Minimized;
+        this.WindowState = FormWindowState.Normal;
     }
     private async Task LoadMotdAsync()
     {
@@ -416,14 +411,31 @@ public partial class Form1 : Form
             var solutions = new Dictionary<double, string>();
             real.Clear();
             solutions.Clear();
+
             if (id == 5)
             {
-                //the altf hotkey
-                //if window not active, becomes active. If window active - gives you the elevation calculation for your cursor.
-                if (pop())
+                // якщо гра у фулскріні і не у фокусі “Search” — сфокусувати “Search” і вийти
+                var searchWnd = GetSearchWindowHandle();
+                var fg = NativeMethods.GetForegroundWindow();
+
+                bool isGameFullScreen = ScreenshotHelper.DetectWindowMode("TslGame") == WindowMode.FullScreen;
+                bool notSearchForeground = fg != searchWnd;
+                bool needActivateSelf = !IsAppWindowFocused();
+                if (notSearchForeground && needActivateSelf)
                 {
-                    return;
+                    // 1) Якщо гра у фулскріні і не “Search” у фокусі — фокусимо “Search” і виходимо
+                    if (isGameFullScreen)
+                    {
+                        FocusSearchWindow();
+                        return;
+                    } 
+                    else
+                    {
+                        pop();
+                        return;
+                    }
                 }
+
                 real.Clear();
                 solutions.Clear();
                 listView1.Items.Clear();
@@ -432,6 +444,13 @@ public partial class Form1 : Form
                 {
                     //calculation of firing solution begins
                     double elevation = getElevation(mdistance);
+                    if (!notSearchForeground)
+                    {
+                        // фокус гри (як і було)
+                        var tslHandle = Process.GetProcessesByName("TslGame").LastOrDefault()?.MainWindowHandle ?? IntPtr.Zero;
+                        if (tslHandle != IntPtr.Zero)
+                            NativeMethods.SetForegroundWindow(tslHandle);
+                    }
                     Debug.WriteLine($"[MANUAL] mdistance={mdistance}, elevation={elevation}");
                     //it only takes distance arg because it reads your cursor pos inside the function
                     label6.Text = elevation.ToString("#.##");
@@ -536,6 +555,11 @@ public partial class Form1 : Form
                         {
                             ForeColor = Color.Green
                         };
+
+                        var topText = listView1.Items[0].Text;
+                        var aimNumber = ExtractAimNumber(topText);
+                        if (aimNumber.HasValue)
+                            _ = SpeakAsync(aimNumber.Value.ToString());
                     }
                     else
                     {
@@ -932,4 +956,42 @@ public partial class Form1 : Form
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
         PropertyNameCaseInsensitive = true
     };
+
+    // Повертає вікно Windows Search як в оригінальному коді
+    private static IntPtr GetSearchWindowHandle()
+    {
+        return NativeMethods.FindWindowEx(IntPtr.Zero, IntPtr.Zero, "Windows.UI.Core.CoreWindow", "Search");
+    }
+
+    private static bool IsAppWindowFocused() => Form.ActiveForm != null;
+
+    // Логіка залишена ідентичною: біп і фокус на "Search"
+    private static void FocusSearchWindow()
+    {
+        var search = GetSearchWindowHandle();
+        Console.Beep(); // як було — не змінюю логіку
+        if (search != IntPtr.Zero)
+            NativeMethods.SetForegroundWindow(search);
+    }
+
+    private static int? ExtractAimNumber(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var m = Regex.Matches(text, @"\d+");
+        if (m.Count == 0) return null;
+        return int.TryParse(m[^1].Value, out var v) ? v : (int?)null;
+    }
+
+    private Task SpeakAsync(string text)
+    {
+        var tcs = new TaskCompletionSource<object?>();
+        void handler(object? s, SpeakCompletedEventArgs e)
+        {
+            _tts.SpeakCompleted -= handler;
+            tcs.TrySetResult(null);
+        }
+        _tts.SpeakCompleted += handler;
+        _tts.SpeakAsync(text);
+        return tcs.Task;
+    }
 }

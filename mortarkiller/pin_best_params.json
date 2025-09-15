@@ -1,32 +1,32 @@
 {
-  "score": -1118.8667878012643,
-  "matched": 32,
+  "score": -1155.1521242039694,
+  "matched": 33,
   "missing": 0,
   "false_positive": 0,
-  "mean_distance": 5.035412881210492,
+  "mean_distance": 4.995390175637297,
   "median_distance": 1,
   "templates_dir": "best_pin_masks",
   "parameters": {
     "scale": 1.12,
     "blur": 3,
     "open_size": 1,
-    "close_size": 5,
+    "close_size": 11,
     "erode_iter": 0,
     "dilate_iter": 0,
-    "min_area_ratio": 1E-05,
-    "max_area_ratio": 0.015384615,
-    "tpl_min_score": 0.5,
-    "aspect_min": 1.05,
+    "min_area_ratio": 2.56E-05,
+    "max_area_ratio": 0.025999999,
+    "tpl_min_score": 0.39999999999999997,
+    "aspect_min": 1.1400000000000001,
     "nms_radius": 22,
     "tpl_edge_weight": 0.75,
-    "tpl_build_fill_frac": 0.55,
+    "tpl_build_fill_frac": 0.5,
     "tpl_build_edge_frac": 0.45,
     "close_if_components_le": 1,
     "colors": [
       {
         "color": "Green",
         "hue_center": 61,
-        "hue_tol": 10,
+        "hue_tol": 8,
         "sat_min": 96,
         "val_min": 111
       },
@@ -34,22 +34,22 @@
         "color": "Orange",
         "hue_center": 10,
         "hue_tol": 4,
-        "sat_min": 96,
-        "val_min": 111
+        "sat_min": 106,
+        "val_min": 138
       },
       {
         "color": "Yellow",
         "hue_center": 29,
-        "hue_tol": 5,
-        "sat_min": 106,
-        "val_min": 126
+        "hue_tol": 6,
+        "sat_min": 116,
+        "val_min": 141
       },
       {
         "color": "Blue",
         "hue_center": 101,
         "hue_tol": 8,
-        "sat_min": 96,
-        "val_min": 131
+        "sat_min": 116,
+        "val_min": 121
       }
     ]
   }

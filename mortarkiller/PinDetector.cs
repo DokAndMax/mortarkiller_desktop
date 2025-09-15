@@ -195,7 +195,7 @@ public static class DebuggerViz
             else maskBlur.CopyTo(maskOpen);
 
             int rawComponents = Util.CountConnected(maskRaw);
-            bool doClose = rawComponents <= p.CloseIfComponentsLE;
+            bool doClose = rawComponents >= p.CloseIfComponentsLE;
 
             using var maskClose = new Mat();
             if (kClose > 1 && doClose) CvInvoke.MorphologyEx(maskOpen, maskClose, MorphOp.Close, kernelClose, new Point(-1, -1), 1, BorderType.Reflect, default);
@@ -737,7 +737,7 @@ public static class ParamsIO
             Colors = new ColorParams[4]
         };
 
-        p.TplMinScore = pEl.TryGetProperty("tpl_min_score", out var v1) ? v1.GetDouble() : 0.45;
+        p.TplMinScore = pEl.TryGetProperty("tpl_min_score", out var v1) ? v1.GetDouble() : 0.15;
         p.AspectMin = pEl.TryGetProperty("aspect_min", out var v2) ? v2.GetDouble() : 1.05;
         p.NmsRadius = pEl.TryGetProperty("nms_radius", out var v3) ? v3.GetDouble() : 22.0;
         p.TplEdgeWeight = pEl.TryGetProperty("tpl_edge_weight", out var v4) ? v4.GetDouble() : 0.70;
@@ -1025,7 +1025,7 @@ public static class Sampler
             Colors = colors,
 
             // NEW defaults
-            TplMinScore = 0.45,
+            TplMinScore = 0.15,
             AspectMin = 1.05,
             NmsRadius = 22.0,
             TplEdgeWeight = 0.70,
@@ -1084,7 +1084,7 @@ public static class Sampler
             Colors = colors,
 
             // NEW randomized
-            TplMinScore = 0.35 + rng.NextDouble() * 0.35,          // [0.35..0.70]
+            TplMinScore = 0.1 + rng.NextDouble() * 69,          // [0.1..0.70]
             AspectMin = 1.0 + rng.NextDouble() * 0.2,              // [1.00..1.20]
             NmsRadius = 16.0 + rng.NextDouble() * 16.0,            // [16..32]
             TplEdgeWeight = 0.55 + rng.NextDouble() * 0.3,         // [0.55..0.85]
@@ -1421,7 +1421,7 @@ public class ParameterSet
     public float Scale;
 
     // NEW: tunables for templates/NMS/aspect/close gating
-    public double TplMinScore = 0.45;            // 0..1, було 0.45 в коді
+    public double TplMinScore = 0.15;            // 0..1, було 0.45 в коді
     public double AspectMin = 1.05;              // було 1.05
     public double NmsRadius = 22.0;              // px, було 22.0
     public double TplEdgeWeight = 0.70;          // 0..1; вага IoU по ребру в скорі шаблону (fill = 1 - edge)
@@ -1769,7 +1769,7 @@ public class PinDetector(TemplateLibrary? templates = null)
             if (kOpen > 1)
                 CvInvoke.MorphologyEx(maskCpu, maskCpu, MorphOp.Open, kernelOpen, new Point(-1, -1), 1, BorderType.Reflect, default);
             //CvInvoke.Imwrite("test3.png", maskCpu);
-            bool doClose = rawComponents <= p.CloseIfComponentsLE;
+            bool doClose = rawComponents >= p.CloseIfComponentsLE;
             if (kClose > 1 && doClose)
                 CvInvoke.MorphologyEx(maskCpu, maskCpu, MorphOp.Close, kernelClose, new Point(-1, -1), 1, BorderType.Reflect, default);
             //CvInvoke.Imwrite("test4.png", maskCpu);
@@ -2169,7 +2169,7 @@ public class TemplateLibrary : IDisposable
 
                 if (kOpen > 1) CvInvoke.MorphologyEx(outFinal[c], outFinal[c], MorphOp.Open, kernelOpen, new Point(-1, -1), 1, BorderType.Reflect, default);
                 int comps = Util.CountConnected(outFinal[c]);
-                if (kClose > 1 && comps <= p.CloseIfComponentsLE) CvInvoke.MorphologyEx(outFinal[c], outFinal[c], MorphOp.Close, kernelClose, new Point(-1, -1), 1, BorderType.Reflect, default);
+                if (kClose > 1 && comps >= p.CloseIfComponentsLE) CvInvoke.MorphologyEx(outFinal[c], outFinal[c], MorphOp.Close, kernelClose, new Point(-1, -1), 1, BorderType.Reflect, default);
                 if (p.ErodeIterations > 0) CvInvoke.Erode(outFinal[c], outFinal[c], null, new Point(-1, -1), p.ErodeIterations, BorderType.Reflect, default);
                 if (p.DilateIterations > 0) CvInvoke.Dilate(outFinal[c], outFinal[c], null, new Point(-1, -1), p.DilateIterations, BorderType.Reflect, default);
             }
@@ -2474,16 +2474,16 @@ public class ProgramPin
             }
         }
 
-        var config = JsonSerializer.Deserialize<TrainingConfig>(await File.ReadAllTextAsync(@"C:\Users\Maks\source\repos\WinFormsApp1\WinFormsApp1\bin\x64\Debug\net8.0-windows\screenshot2\manifest.json"));
-        var stage1Candidates = new List<ParameterSet>();
-        stage1Candidates.Add(p); // Just evaluate the provided params on the dataset
-        var best = await EvaluateCandidatesParallel(config.Items, stage1Candidates, "Stage 1", 1);
-        string visDir = Util.EnsureDir(Path.Combine(outDir, "viz"));
-        using var bestTemplates = TemplateLibrary.Build(config.Items, best.Params);
-        Reporter.SaveBestPinMasks(outDir, bestTemplates);
-        Reporter.SaveDiagnosticsCsv(outDir, best);
-        Reporter.SaveVisualizations(visDir, best);
-        DebuggerViz.DumpIntermediatesFor(config, best.Params, bestTemplates);
+        //var config = JsonSerializer.Deserialize<TrainingConfig>(await File.ReadAllTextAsync(@"C:\Users\Maks\source\repos\WinFormsApp1\WinFormsApp1\bin\x64\Debug\net8.0-windows\screenshot2\manifest.json"));
+        //var stage1Candidates = new List<ParameterSet>();
+        //stage1Candidates.Add(p); // Just evaluate the provided params on the dataset
+        //var best = await EvaluateCandidatesParallel(config.Items, stage1Candidates, "Stage 1", 1);
+        //string visDir = Util.EnsureDir(Path.Combine(outDir, "viz"));
+        //using var bestTemplates = TemplateLibrary.Build(config.Items, best.Params);
+        //Reporter.SaveBestPinMasks(outDir, bestTemplates);
+        //Reporter.SaveDiagnosticsCsv(outDir, best);
+        //Reporter.SaveVisualizations(visDir, best);
+        //DebuggerViz.DumpIntermediatesFor(config, best.Params, bestTemplates);
         Console.WriteLine($"Detect done. Images processed: {processed}. Output: {outDir}");
         await Task.CompletedTask;
         return 0;

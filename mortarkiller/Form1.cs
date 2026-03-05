@@ -13,7 +13,6 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Net.Mime.MediaTypeNames;
 
 
 namespace mortarkiller;
@@ -30,6 +29,7 @@ public partial class Form1 : Form
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
     enum KeyModifier
     {
         None = 0,
@@ -146,19 +146,20 @@ public partial class Form1 : Form
         { 460, "700"},
         { 455, "700"},
     };
-
     private DetectorParams? _gridParams;
-    private ParameterSet? _pinParams;
-    private TemplateLibrary? _pinTemplate;
-    private PinDetector? _pinDetector;
-    private PlayerParams? _playersParams;
-    private PlayerDetector? _playerDetector;
-    private LiveMode? _playerLive;
-
+    private YoloDetector? _yoloDetector;
     private AutoMortarRunner? _auto;
 
     // TTS для ручного режиму
     private readonly SpeechSynthesizer _tts = new();
+
+    // -- Мітки класів YOLO-моделі --
+    // Порядок має відповідати тому, що використовувався при тренуванні
+    private static readonly string[] YoloLabels = new[]
+    {
+        "Pin_Blue", "Pin_Green", "Pin_Orange", "Pin_Yellow",
+        "Player_Blue", "Player_Green", "Player_Orange", "Player_Yellow"
+    };
 
     public Form1()
     {
@@ -176,6 +177,7 @@ public partial class Form1 : Form
         this.WindowState = FormWindowState.Minimized;
         this.WindowState = FormWindowState.Normal;
     }
+
     private async Task LoadMotdAsync()
     {
         try
@@ -204,6 +206,7 @@ public partial class Form1 : Form
             motdTextBox.Invoke((MethodInvoker)(() => motdTextBox.Text = errorMessage));
         }
     }
+
     private void Form1_Load(object sender, EventArgs e)
     {
         //listView is the output, contains both firing solutions and help cues for user
@@ -233,15 +236,12 @@ public partial class Form1 : Form
 
         InitDetectors();
 
-        if (_pinDetector != null && _pinParams != null && _gridParams != null && _playerLive != null && _playersParams != null)
+        if (_yoloDetector != null && _gridParams != null)
         {
             _auto = new AutoMortarRunner(
                 processName: "TslGame",
-                pinDetector: _pinDetector,
-                pinParams: _pinParams,
+                yoloDetector: _yoloDetector,
                 gridParams: _gridParams,
-                playerLive: _playerLive,
-                playersParams: _playersParams,
                 computeSolutions: ComputeSolutionsAndUpdateUI,
                 intervalMs: 200,
                 cropTopPercent: 0.08,
@@ -342,7 +342,8 @@ public partial class Form1 : Form
             Keys key = (Keys)(((int)m.LParam >> 16) & 0xFFFF);                  // The key of the hotkey that was pressed.
             KeyModifier modifier = (KeyModifier)((int)m.LParam & 0xFFFF);       // The modifier of the hotkey that was pressed.
             int id = m.WParam.ToInt32();
-            if (id == 1)
+
+            if (id == 1) // Alt+Q
             {
                 //first key to set scale (alt q)
                 c1x = Control.MousePosition.X;
@@ -351,7 +352,8 @@ public partial class Form1 : Form
                 //unlocks the other key
                 setq = true;
             }
-            if (id == 2)
+
+            if (id == 2) // Alt+W
             {
                 c2x = Control.MousePosition.X;
                 c2y = Control.MousePosition.Y;
@@ -374,7 +376,8 @@ public partial class Form1 : Form
                     }
                 }
             }
-            if (id == 3)
+
+            if (id == 3) // Alt+A
             {
                 //set mortar (player) position
                 sx = Control.MousePosition.X;
@@ -388,7 +391,8 @@ public partial class Form1 : Form
                     label4.Text = mdistance.ToString("#.##");
                 }
             }
-            if (id == 4)
+
+            if (id == 4) // Alt+S
             {
                 //set target position
                 //if target updates, it is assumed mortar pos is the same as before. Vice versa too.
@@ -412,23 +416,24 @@ public partial class Form1 : Form
             real.Clear();
             solutions.Clear();
 
-            if (id == 5)
+            if (id == 5) // Alt+F
             {
-                // якщо гра у фулскріні і не у фокусі “Search” — сфокусувати “Search” і вийти
+                // якщо гра у фулскріні і не у фокусі "Search" — сфокусувати "Search" і вийти
                 var searchWnd = GetSearchWindowHandle();
                 var fg = NativeMethods.GetForegroundWindow();
 
                 bool isGameFullScreen = ScreenshotHelper.DetectWindowMode("TslGame") == WindowMode.FullScreen;
                 bool notSearchForeground = fg != searchWnd;
                 bool needActivateSelf = !IsAppWindowFocused();
+
                 if (notSearchForeground && needActivateSelf)
                 {
-                    // 1) Якщо гра у фулскріні і не “Search” у фокусі — фокусимо “Search” і виходимо
+                    // 1) Якщо гра у фулскріні і не "Search" у фокусі — фокусимо "Search" і виходимо
                     if (isGameFullScreen)
                     {
                         FocusSearchWindow();
                         return;
-                    } 
+                    }
                     else
                     {
                         pop();
@@ -451,9 +456,11 @@ public partial class Form1 : Form
                         if (tslHandle != IntPtr.Zero)
                             NativeMethods.SetForegroundWindow(tslHandle);
                     }
+
                     Debug.WriteLine($"[MANUAL] mdistance={mdistance}, elevation={elevation}");
                     //it only takes distance arg because it reads your cursor pos inside the function
                     label6.Text = elevation.ToString("#.##");
+
                     int ctr = 0;
                     for (double i = 85.5; i >= 45.5; i -= 0.5)
                     {
@@ -548,6 +555,7 @@ public partial class Form1 : Form
                             listView1.Items.Add("Precise Hit. Aim: " + item.Value);
                         }
                     }
+
                     if (listView1.Items.Count != 0)
                     {
                         //make best firing solution listed as first GREEN and sexy
@@ -565,6 +573,7 @@ public partial class Form1 : Form
                     {
                         listView1.Items.Add("NO FIRING SOLUTION! CANT HIT");
                     }
+
                     if (!checkBox1.Checked)
                     {
                         //if user tries to do stuff with the keybinds turned off give a warn
@@ -612,6 +621,7 @@ public partial class Form1 : Form
             }
             // do something
 
+            //  Alt+1..4 -> запуск авто-режиму з YOLO
             if (_readAltNumHotkeys)
             {
                 switch (id)
@@ -624,14 +634,15 @@ public partial class Form1 : Form
                     case 11:
                     case 12:
                     case 13:
-                        var pinColor = MapHotkeyIdToPinColor(id);
-                        var markerColor = MapUiMarkerNumberToColorName(_currentMarkerNumber);
-                        _auto?.Start(pinColor, markerColor);
+                        var pinClassName = MapHotkeyIdToPinClassName(id);
+                        var playerClassName = MapHotkeyIdToPlayerClassName(id);
+                        _auto?.Start(pinClassName, playerClassName);
                         break;
                 }
             }
         }
     }
+
     private void Form1_Closing(object sender, FormClosingEventArgs e)
     {
         UnregisterHotKey(this.Handle, 1);
@@ -652,6 +663,7 @@ public partial class Form1 : Form
         UnregisterHotKey(this.Handle, 13);
 
         _auto?.Dispose();
+        _yoloDetector?.Dispose();
     }
 
     //hotkeys on/off
@@ -809,49 +821,89 @@ public partial class Form1 : Form
         }
     }
 
+    //  НОВА ІНІЦІАЛІЗАЦІЯ: YoloDetector замість кількох детекторів
     private void InitDetectors()
     {
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+
+        // -- Grid params (автокореляційний детектор сітки — без змін) --
         string gridParamsPath = Path.Combine(baseDir, "grid_params.json");
-        string pinParamsPath = Path.Combine(baseDir, "pin_best_params.json");
-        string playersPath = Path.Combine(baseDir, "players_params.json");
+        if (File.Exists(gridParamsPath))
+        {
+            _gridParams = JsonSerializer.Deserialize<DetectorParams>(
+                File.ReadAllText(gridParamsPath), JsonOptions());
+        }
+        else
+        {
+            _gridParams = new DetectorParams(); // дефолтні параметри
+            Debug.WriteLine("[INIT] grid_params.json not found, using defaults");
+        }
 
-        _gridParams = JsonSerializer.Deserialize<DetectorParams>(
-            File.ReadAllText(gridParamsPath),
-            JsonOptions());
+        // -- YOLO модель (один файл замість купи JSON+масок) --
+        string modelPath = Path.Combine(baseDir, "best.onnx");
+        if (File.Exists(modelPath))
+        {
+            try
+            {
+                _yoloDetector = new YoloDetector(
+                    modelPath: modelPath,
+                    labels: YoloLabels,
+                    yoloVersion: YoloVersion.V10,
+                    imgsz: 1920,
+                    confThreshold: 0.5f,
+                    nmsThreshold: 0.4f,
+                    useGpu: true);
 
-        _pinParams = ParamsIO.LoadFromBestParamsJson(pinParamsPath);
-
-        string dirOfPinParams = Path.GetDirectoryName(Path.GetFullPath(pinParamsPath)) ?? ".";
-        string templateDir = Path.Combine(dirOfPinParams, "best_pin_masks");
-        _pinTemplate = Directory.Exists(templateDir) ? TemplateLibrary.LoadFromDir(templateDir) : null;
-        _pinDetector = new PinDetector(templates: _pinTemplate);
-
-        _playersParams =JsonSerializer.Deserialize<PlayerParams>(
-            File.ReadAllText(playersPath),
-            JsonOptions());
-        _playerDetector = new PlayerDetector(_playersParams!.CalibratedColors);
-        _playerLive = new LiveMode(_playerDetector);
+                Debug.WriteLine("[INIT] YoloDetector loaded OK");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[INIT] Failed to load YOLO model: {ex.Message}");
+                _yoloDetector = null;
+            }
+        }
+        else
+        {
+            Debug.WriteLine($"[INIT] YOLO model not found at: {modelPath}");
+            _yoloDetector = null;
+        }
     }
 
-    private PinColor MapHotkeyIdToPinColor(int id) => id switch
+    // ==========================================================
+    //  Маппінг хоткеїв -> YOLO class names
+    // ==========================================================
+
+    /// <summary>
+    /// Повертає ім'я класу піна для YOLO за hotkey id.
+    /// Alt+1/Numpad1 -> "pin_yellow", Alt+2 -> "pin_orange" і т.д.
+    /// </summary>
+    private static string MapHotkeyIdToPinClassName(int id) => id switch
     {
-        6 or 10 => PinColor.Yellow,
-        7 or 11 => PinColor.Orange,
-        8 or 12 => PinColor.Blue,
-        9 or 13 => PinColor.Green,
-        _ => PinColor.Yellow
+        6 or 10 => "Pin_Yellow",
+        7 or 11 => "Pin_Orange",
+        8 or 12 => "Pin_Blue",
+        9 or 13 => "Pin_Green",
+        _ => "Pin_Yellow"
     };
 
-    private ColorName MapUiMarkerNumberToColorName(int n) => n switch
+    /// <summary>
+    /// Повертає ім'я класу гравця для YOLO за hotkey id.
+    /// Колір маркера гравця відповідає вибраному в UI radio button.
+    /// </summary>
+    private string MapHotkeyIdToPlayerClassName(int id)
     {
-        1 => ColorName.Yellow,
-        2 => ColorName.Orange,
-        3 => ColorName.Blue,
-        4 => ColorName.Green,
-        _ => ColorName.Yellow
-    };
+        // Гравець завжди відповідає поточному вибору маркера
+        return _currentMarkerNumber switch
+        {
+            1 => "Player_Yellow",
+            2 => "Player_Orange",
+            3 => "Player_Blue",
+            4 => "Player_Green",
+            _ => "Player_Yellow"
+        };
+    }
 
+    //  Обчислення рішень (без змін у фізиці)
     private (bool hasShort, bool hasOver, string bestItemText, string secondItemText, double impactTime)
         ComputeSolutionsAndUpdateUI(double distanceMeters, int? pinScreenY)
     {
@@ -869,8 +921,8 @@ public partial class Form1 : Form
         double elevation = pinScreenY.HasValue
             ? getElevationByScreenY(mdistance, pinScreenY.Value)
             : getElevation(mdistance);
-        Debug.WriteLine($"[AUTO] mdistance={mdistance}, elevation={elevation}");
 
+        Debug.WriteLine($"[AUTO] mdistance={mdistance}, elevation={elevation}");
         label6.Text = elevation.ToString("#.##");
 
         // Далі — без змін, як у твоєму ручному коді:

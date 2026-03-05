@@ -17,40 +17,21 @@
     <None Remove="NewFolder\**" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="best_pin_masks\common_edge.png" />
-    <None Remove="best_pin_masks\common_fill.png" />
-    <None Remove="best_pin_masks\meta.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="best_pin_masks\common_edge.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="best_pin_masks\common_fill.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="best_pin_masks\meta.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="mortarkiller.ico" />
     <Content Include="mortarkiller1.ico" />
     <PackageReference Include="Emgu.CV" Version="4.12.0.5763" />
     <PackageReference Include="Emgu.CV.Bitmap" Version="4.12.0.5763" />
     <PackageReference Include="Emgu.CV.runtime.windows" Version="4.12.0.5763" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.24.2" />
     <PackageReference Include="ScreenCapture.NET" Version="3.0.0" />
     <PackageReference Include="ScreenCapture.NET.DX11" Version="3.0.0" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
     <PackageReference Include="System.Speech" Version="9.0.8" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="grid_params.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="pin_best_params.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="players_params.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Update="best.onnx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 </Project>

@@ -18,68 +18,54 @@ namespace mortarkiller;
 
 public sealed class AutoMortarRunner : IDisposable
 {
-    // Делегат, який рахує рішення стрільби (ваш фізичний блок) і оновлює UI
-    private readonly Func<double, int?, (bool hasShort, bool hasOver, string bestItemText, string secondItemText, double impactTime)> _computeSolutions;
+    // ==========================================================
+    //  Залежності
+    // ==========================================================
+
+    private readonly Func<double, int?, (bool hasShort, bool hasOver,
+        string bestItemText, string secondItemText, double impactTime)> _computeSolutions;
 
     private readonly double _cropSidePercent;
     private readonly double _cropTopPercent;
     private readonly string _debugRoot;
     private readonly bool _enableDebug;
     private readonly DetectorParams _gridParams;
-
-    // Налаштування циклу
     private readonly int _intervalMs;
-
-    private readonly PinDetector _pinDetector;
-    private readonly ParameterSet _pinParams;
-
-    private readonly LiveMode _playerLive;
-    private readonly PlayerParams _playersParams;
-
-    // Зовнішні залежності (детектори та параметри)
     private readonly string _processName;
+    private readonly bool _useScaleSmoothing;
+
+    // -- НОВЕ: один YOLO детектор замість PinDetector + LiveMode --
+    private readonly YoloDetector _yolo;
 
     private readonly SpeechSynthesizer _tts = new();
 
-    // Чи згладжувати масштаб (за замовчуванням — ні)
-    private readonly bool _useScaleSmoothing;
-
-    // Управління життєвим циклом
+    // -- Управління життєвим циклом --
     private CancellationTokenSource _cts;
-
-    // Debug сесія на кожен Start()
     private DebugDumper? _dbg;
-
-    // Обчислення масштабу
-    private ProgramCombined.EWMA? _ewma;            // створюється на Start()
-
-    // Контроль збереження фейлів (щоб не засипати диск)
+    private ProgramCombined.EWMA? _ewma;
     private int _p1FailSaved, _p2FailSaved;
-
-    // Глобальний лічильник детекцій від старту програми
     private static int s_detectionCounter = 0;
 
+    // ==========================================================
+    //  Конструктор — спрощений
+    // ==========================================================
+
     public AutoMortarRunner(
-           string processName,
-           PinDetector pinDetector,
-           ParameterSet pinParams,
-           DetectorParams gridParams,
-           LiveMode playerLive,
-           PlayerParams playersParams,
-           Func<double, int?, (bool hasShort, bool hasOver, string bestItemText, string secondItemText, double impactTime)> computeSolutions,
-           int intervalMs = 200,
-           double cropTopPercent = 0.08,
-           double cropSidePercent = 0.47,
-           bool enableDebug = true,
-           string debugRoot = null,
-           bool useScaleSmoothing = false) // <-- новий параметр
+        string processName,
+        YoloDetector yoloDetector,          // <- ЗАМІСТЬ pinDetector, pinParams, playerLive, playersParams
+        DetectorParams gridParams,
+        Func<double, int?, (bool hasShort, bool hasOver,
+            string bestItemText, string secondItemText, double impactTime)> computeSolutions,
+        int intervalMs = 200,
+        double cropTopPercent = 0.08,
+        double cropSidePercent = 0.47,
+        bool enableDebug = true,
+        string debugRoot = null,
+        bool useScaleSmoothing = false)
     {
         _processName = processName;
-        _pinDetector = pinDetector;
-        _pinParams = pinParams;
+        _yolo = yoloDetector;
         _gridParams = gridParams;
-        _playerLive = playerLive;
-        _playersParams = playersParams;
         _computeSolutions = computeSolutions;
 
         _intervalMs = Math.Max(0, intervalMs);
@@ -88,88 +74,102 @@ public sealed class AutoMortarRunner : IDisposable
 
         CvInvoke.NumThreads = Math.Max(1, Environment.ProcessorCount - 1);
 
-        // Debug і згладжування
         _enableDebug = enableDebug;
         _debugRoot = debugRoot ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug");
         _useScaleSmoothing = useScaleSmoothing;
     }
 
+    // ==========================================================
+    //  Події
+    // ==========================================================
+
     public event Action<double> DistanceReady;
     public event Action<Point, Point> PairFound;
-    // Готова дистанція, м
     public event Action<double> PxPer100Ready;
-    // Події/зворотні виклики
-    public event Action<string> Status;          // Текстовий статус
+    public event Action<string> Status;
 
     public bool IsRunning => _cts is { IsCancellationRequested: false };
+
+    // ==========================================================
+    //  Dispose / Stop
+    // ==========================================================
 
     public void Dispose()
     {
         Stop();
         try { _tts?.Dispose(); } catch { }
         try { _dbg?.Dispose(); } catch { }
+        // НЕ dispose _yolo — він належить Form1
     }
 
-    public void Start(PinColor desiredPinColor, ColorName desiredMarkerColor)
+    public void Stop()
+    {
+        if (_cts == null) return;
+        try { _cts.Cancel(); } catch { }
+        _cts.Dispose();
+        _cts = null;
+    }
+
+    // ==========================================================
+    //  Start — НОВА СИГНАТУРА: string className замість enum
+    // ==========================================================
+
+    /// <summary>
+    /// Запускає авто-режим.
+    /// pinClassName:    YOLO class name піна, наприклад "pin_yellow"
+    /// playerClassName: YOLO class name маркера гравця, наприклад "player_yellow"
+    /// </summary>
+    public void Start(string pinClassName, string playerClassName)
     {
         Stop();
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
 
-        // Лічильник спроб (детекцій) від старту програми
         int detNo = Interlocked.Increment(ref s_detectionCounter);
-        string sessionSuffix = $"det{detNo:0000}_pin-{desiredPinColor}_mark-{desiredMarkerColor}";
+        string sessionSuffix = $"det{detNo:0000}_pin-{pinClassName}_mark-{playerClassName}";
 
-        // Нова debug-папка на кожен запуск ALT+1..4
         _dbg?.Dispose();
         _dbg = _enableDebug ? new DebugDumper(_debugRoot, enabled: true, sessionSuffix: sessionSuffix) : null;
         _dbg?.SaveText("session_info",
-            $"Started: {DateTime.Now:O}\nDetNo={detNo}\nPin={desiredPinColor}\nMarker={desiredMarkerColor}\n");
+            $"Started: {DateTime.Now:O}\nDetNo={detNo}\nPin={pinClassName}\nPlayer={playerClassName}\n");
 
-        // Скидаємо лічильники фейлів
         _p1FailSaved = _p2FailSaved = 0;
-
-        // Чисте EWMA на цю сесію (або вимкнено)
         _ewma = _useScaleSmoothing ? new ProgramCombined.EWMA(alpha: 0.25) : null;
 
-        int? pinScreenY = null; // Y піна з фази 1 у координатах всього вікна
+        int? pinScreenY = null;
 
         Task.Run(async () =>
         {
-            // Локальні метрики
             var totalSw = Stopwatch.StartNew();
             long setupMs = 0;
 
-            // Фаза 1
+            // -- Метрики фази 1 --
             var p1ScrMs = new List<long>();
-            var p1PinMs = new List<long>();
+            var p1YoloMs = new List<long>();
             var p1LoopMs = new List<long>();
             int p1Iters = 0;
 
-            // Фаза 2
+            // -- Метрики фази 2 --
             var p2ScrMs = new List<long>();
             var p2GridMs = new List<long>();
-            var p2PinMs = new List<long>();
-            var p2MarkerMs = new List<long>();
+            var p2YoloMs = new List<long>();
             var p2OverlayMs = new List<long>();
             var p2LoopMs = new List<long>();
             int p2Iters = 0;
 
-            // Хелпер форматування статистики
             string Stat(string name, List<long> v)
             {
                 if (v == null || v.Count == 0) return $"{name}: n=0";
-                double avg = v.Average();
-                long min = v.Min();
-                long max = v.Max();
-                return $"{name}: n={v.Count}, avg={avg:F1}ms, min={min}ms, max={max}ms";
+                return $"{name}: n={v.Count}, avg={v.Average():F1}ms, min={v.Min()}ms, max={v.Max()}ms";
             }
 
             try
             {
-                Status?.Invoke($"[AUTO][#{detNo}] Phase 1: searching pin={desiredPinColor}");
+                Status?.Invoke($"[AUTO][#{detNo}] Phase 1: searching pin={pinClassName}");
 
-                // ===== ЦИКЛ 1: кроп центральної смуги, шукаємо PIN потрібного кольору
+                // ===================================================
+                //  ФАЗА 1: Кроп центральної смуги, шукаємо PIN
+                // ===================================================
                 var swSetup = Stopwatch.StartNew();
                 Point? pin1 = null;
                 bool firstLoopP1 = true;
@@ -179,18 +179,17 @@ public sealed class AutoMortarRunner : IDisposable
                     p1Iters++;
                     var swLoop = Stopwatch.StartNew();
 
-                    // Фіксуємо час підготовки до першого скріншота (setup)
                     if (firstLoopP1)
                     {
                         setupMs = swSetup.ElapsedMilliseconds;
                         firstLoopP1 = false;
                     }
 
+                    // Скріншот
                     var swShot = Stopwatch.StartNew();
                     var (frame1, mode1) = ScreenshotHelper.CaptureSmart(_processName);
                     swShot.Stop();
                     p1ScrMs.Add(swShot.ElapsedMilliseconds);
-                    Debug.WriteLine($"[AutoMortarRunner] Phase1 Screenshot time: {swShot.ElapsedMilliseconds} ms");
 
                     if (mode1 == WindowMode.FullScreenMinimized || frame1 == null)
                     {
@@ -199,47 +198,65 @@ public sealed class AutoMortarRunner : IDisposable
                         await Task.Delay(_intervalMs, token);
                         continue;
                     }
-                    using var bmp = frame1;
 
+                    using var bmp = frame1;
                     var cropRect = BuildCentralStrip(bmp.Width, bmp.Height, _cropTopPercent, _cropSidePercent);
                     using var croppedBmp = bmp.Clone(cropRect, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
                     using var mat = croppedBmp.ToMat();
                     EnsureBgr(ref Unsafe.AsRef(in mat));
 
-                    var swPin = Stopwatch.StartNew();
-                    var pinRes = _pinDetector.DetectFromMat(mat, "auto-phase1", _pinParams, desiredPinColor);
-                    swPin.Stop();
-                    p1PinMs.Add(swPin.ElapsedMilliseconds);
+                    // -- YOLO детекція замість PinDetector --
+                    var swYolo = Stopwatch.StartNew();
+                    var predictions = _yolo.Detect(mat);
+                    swYolo.Stop();
+                    p1YoloMs.Add(swYolo.ElapsedMilliseconds);
 
-                    if (pinRes.Predictions.Count > 0)
+                    // Шукаємо пін потрібного класу
+                    var pinPred = predictions
+                        .Where(p => p.ClassName == pinClassName)
+                        .OrderByDescending(p => p.Confidence)
+                        .FirstOrDefault();
+
+                    if (pinPred != null)
                     {
-                        var pr = pinRes.Predictions[0];
-                        var foundLocal = new Point(pr.X + cropRect.X, pr.Y + cropRect.Y);
+                        // BottomTip = гостряк піна -> переводимо в координати повного кадру
+                        var tipLocal = pinPred.BottomTip;
+                        var foundFull = new Point(tipLocal.X + cropRect.X, tipLocal.Y + cropRect.Y);
 
-                        pin1 = foundLocal;
+                        pin1 = foundFull;
                         pinScreenY = pin1.Value.Y;
 
-                        // DEBUG: оригінал + оброблений + оверлей
+                        // -- DEBUG --
                         _dbg?.SaveBitmap(bmp, "phase1_full_original");
                         _dbg?.SaveBitmap(croppedBmp, "phase1_cropped_processed");
 
                         using var overlayCrop = mat.Clone();
-                        Reporter.DrawDetectionsOnImage(overlayCrop, pinRes);
+                        DrawYoloPredictions(overlayCrop, predictions);
                         _dbg?.SaveMat(overlayCrop, "phase1_overlay_on_crop");
 
                         _dbg?.SaveText("phase1_notes",
-                            $"DesiredPinColor={desiredPinColor}\n" +
+                            $"DesiredPin={pinClassName}\n" +
                             $"CropRect=({cropRect.X},{cropRect.Y},{cropRect.Width},{cropRect.Height})\n" +
-                            $"FoundPinAt(fullCoords)=({pin1.Value.X},{pin1.Value.Y})");
+                            $"FoundPinAt(fullCoords)=({pin1.Value.X},{pin1.Value.Y})\n" +
+                            $"Confidence={pinPred.Confidence:F3}\n" +
+                            $"TotalDetections={predictions.Count}");
                     }
                     else
                     {
-                        // Зберігаємо невдалі кадри: перші 5 і кожний 20-й далі — в підпапку fails/p1
+                        // Зберігаємо фейли (перші 5 + кожний 20-й)
                         if (_dbg != null && (_p1FailSaved < 5 || _p1FailSaved % 20 == 0))
                         {
                             _dbg.SaveBitmap(bmp, "phase1_fail_full_original", "fails/p1");
                             _dbg.SaveBitmap(croppedBmp, "phase1_fail_cropped", "fails/p1");
-                            _dbg.SaveText("phase1_fail_notes", $"No pin yet. Crop=({cropRect.X},{cropRect.Y},{cropRect.Width},{cropRect.Height})", "fails/p1");
+
+                            using var overlayFail = mat.Clone();
+                            DrawYoloPredictions(overlayFail, predictions);
+                            _dbg.SaveMat(overlayFail, "phase1_fail_overlay", "fails/p1");
+
+                            _dbg.SaveText("phase1_fail_notes",
+                                $"No {pinClassName} found. " +
+                                $"Detections: [{string.Join(", ", predictions.Select(p => $"{p.ClassName}:{p.Confidence:F2}"))}]",
+                                "fails/p1");
                         }
                         _p1FailSaved++;
 
@@ -256,7 +273,9 @@ public sealed class AutoMortarRunner : IDisposable
                 BeepMid();
                 Status?.Invoke($"[AUTO][#{detNo}] Phase 1: pin found");
 
-                // ===== ЦИКЛ 2: натискаємо "M", повний скріншот, детекція маркера+піна+масштабу
+                // ===================================================
+                //  ФАЗА 2: Відкриваємо карту, детектуємо пін+маркер+масштаб
+                // ===================================================
                 InputMini.FocusProcess(_processName);
                 InputMini.PressM_KeybdEvent();
                 await Task.Delay(180, token);
@@ -270,11 +289,11 @@ public sealed class AutoMortarRunner : IDisposable
                     p2Iters++;
                     var swLoop = Stopwatch.StartNew();
 
+                    // Скріншот
                     var swShot = Stopwatch.StartNew();
                     var (frame2, mode2) = ScreenshotHelper.CaptureSmart(_processName);
                     swShot.Stop();
                     p2ScrMs.Add(swShot.ElapsedMilliseconds);
-                    Debug.WriteLine($"[AutoMortarRunner] Phase2 Screenshot time: {swShot.ElapsedMilliseconds} ms");
 
                     if (mode2 == WindowMode.FullScreenMinimized || frame2 == null)
                     {
@@ -283,56 +302,56 @@ public sealed class AutoMortarRunner : IDisposable
                         await Task.Delay(_intervalMs, token);
                         continue;
                     }
-                    using var bmpFull = frame2;
 
+                    using var bmpFull = frame2;
                     using var matFull = bmpFull.ToMat();
                     EnsureBgr(ref Unsafe.AsRef(in matFull));
 
-                    // Перевіряємо, чи є чорна панель зліва, і якщо так — обрізаємо
+                    // Обрізаємо чорну панель зліва (якщо є)
                     int leftCut = DetectLeftPanelCutByDilatedBlack(matFull);
                     var workRect = new Rectangle(leftCut, 0, matFull.Width - leftCut, matFull.Height);
                     using var matWork = new Mat(matFull, workRect);
                     using var bmpWork = bmpFull.Clone(workRect, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
 
-                    // Масштаб
+                    // -- Масштаб сітки (GridScaleDetector — без змін) --
                     var swGrid = Stopwatch.StartNew();
-                    var gridRes = GridScaleDetector.Detect100m(matWork, _gridParams, produceDebug: false, priorPeriodPx: null);
+                    var gridRes = GridScaleDetector.Detect100m(matWork, _gridParams, debug: false, priorPx: null);
                     swGrid.Stop();
                     p2GridMs.Add(swGrid.ElapsedMilliseconds);
 
                     if (gridRes.Success && double.IsFinite(gridRes.PxPer100m) && gridRes.PxPer100m > 0)
                     {
-                        double raw = gridRes.PxPer100m;                    // значення від детектора (правильне)
-                        double val = _useScaleSmoothing ? _ewma!.Update(raw) : raw; // згладження опційне
+                        double raw = gridRes.PxPer100m;
+                        double val = _useScaleSmoothing ? _ewma!.Update(raw) : raw;
                         pxPer100 = val;
                         PxPer100Ready?.Invoke(pxPer100.Value);
                     }
 
-                    // Пін (по обрізаному кадру)
-                    var swPin = Stopwatch.StartNew();
-                    var pinRes2 = _pinDetector.DetectFromMat(matWork, "auto-phase2", _pinParams, desiredPinColor);
-                    swPin.Stop();
-                    p2PinMs.Add(swPin.ElapsedMilliseconds);
+                    // -- YOLO: один виклик знаходить і пін, і маркер --
+                    var swYolo = Stopwatch.StartNew();
+                    var predictions = _yolo.Detect(matWork);
+                    swYolo.Stop();
+                    p2YoloMs.Add(swYolo.ElapsedMilliseconds);
 
-                    if (pinRes2.Predictions.Count > 0)
-                    {
-                        var pr = pinRes2.Predictions[0];
-                        pin2 = new Point(pr.X + leftCut, pr.Y);
-                    }
-
-                    // Маркер гравця (по обрізаному кадру) + корекція координат
-                    var swMarker = Stopwatch.StartNew();
-                    var markRes = _playerLive.Run(bmpWork, _playersParams, desiredMarkerColor);
-                    swMarker.Stop();
-                    p2MarkerMs.Add(swMarker.ElapsedMilliseconds);
-
-                    var markerFound = markRes.markers
-                        .OrderByDescending(m => m.Score)
-                        .Select(m => new Point(m.X + leftCut, m.Y))
+                    // Пін (потрібного кольору) -> BottomTip + корекція leftCut
+                    var pinPred = predictions
+                        .Where(p => p.ClassName == pinClassName)
+                        .OrderByDescending(p => p.Confidence)
                         .FirstOrDefault();
-                    if (markerFound != default) marker2 = markerFound;
 
-                    // DEBUG
+                    if (pinPred != null)
+                        pin2 = new Point(pinPred.BottomTip.X + leftCut, pinPred.BottomTip.Y);
+
+                    // Маркер гравця (потрібного кольору) -> Center + корекція leftCut
+                    var playerPred = predictions
+                        .Where(p => p.ClassName == playerClassName)
+                        .OrderByDescending(p => p.Confidence)
+                        .FirstOrDefault();
+
+                    if (playerPred != null)
+                        marker2 = new Point(playerPred.Center.X + leftCut, playerPred.Center.Y);
+
+                    // -- DEBUG --
                     if (pin2.HasValue && marker2.HasValue && pxPer100.HasValue)
                     {
                         _dbg?.SaveBitmap(bmpFull, "phase2_full_original");
@@ -342,11 +361,14 @@ public sealed class AutoMortarRunner : IDisposable
                         using var overlay = matFull.Clone();
                         using var overlayROI = new Mat(overlay, workRect);
                         Overlay.DrawGridOverlay(overlayROI, gridRes);
-                        Reporter.DrawDetectionsOnImage(overlayROI, pinRes2);
-                        DrawMarkersForDebug(overlayROI, markRes);
+                        DrawYoloPredictions(overlayROI, predictions);
                         _dbg?.SaveMat(overlay, "phase2_overlay");
                         swOverlay.Stop();
                         p2OverlayMs.Add(swOverlay.ElapsedMilliseconds);
+
+                        _dbg?.SaveText("phase2_detections",
+                            string.Join("\n", predictions.Select(p =>
+                                $"{p.ClassName}: conf={p.Confidence:F3} box=({p.BoundingBox.X},{p.BoundingBox.Y},{p.BoundingBox.Width},{p.BoundingBox.Height})")));
                     }
                     else
                     {
@@ -359,14 +381,14 @@ public sealed class AutoMortarRunner : IDisposable
                             using var overlay = matFull.Clone();
                             using var overlayROI = new Mat(overlay, workRect);
                             Overlay.DrawGridOverlay(overlayROI, gridRes);
-                            Reporter.DrawDetectionsOnImage(overlayROI, pinRes2);
-                            DrawMarkersForDebug(overlayROI, markRes);
+                            DrawYoloPredictions(overlayROI, predictions);
                             _dbg.SaveMat(overlay, "phase2_fail_overlay", "fails/p2");
                             swOverlay.Stop();
                             p2OverlayMs.Add(swOverlay.ElapsedMilliseconds);
 
                             _dbg.SaveText("phase2_fail_notes",
-                                $"pin={(pin2.HasValue)} marker={(marker2.HasValue)} scale={(pxPer100.HasValue)} leftCut={workRect.Left}",
+                                $"pin={pin2.HasValue} marker={marker2.HasValue} scale={pxPer100.HasValue} leftCut={leftCut}\n" +
+                                $"Detections: [{string.Join(", ", predictions.Select(p => $"{p.ClassName}:{p.Confidence:F2}"))}]",
                                 "fails/p2");
                         }
                         _p2FailSaved++;
@@ -386,17 +408,22 @@ public sealed class AutoMortarRunner : IDisposable
 
                 InputMini.PressM_KeybdEvent(); // закрити карту
 
+                // ===================================================
+                //  Обчислення рішення
+                // ===================================================
                 if (pin2.HasValue && marker2.HasValue && pxPer100.HasValue)
                 {
                     PairFound?.Invoke(pin2.Value, marker2.Value);
 
-                    var distPx = Math.Sqrt(Math.Pow(pin2.Value.X - marker2.Value.X, 2) + Math.Pow(pin2.Value.Y - marker2.Value.Y, 2));
+                    var distPx = Math.Sqrt(
+                        Math.Pow(pin2.Value.X - marker2.Value.X, 2) +
+                        Math.Pow(pin2.Value.Y - marker2.Value.Y, 2));
                     var distanceMeters = Math.Round(distPx / pxPer100.Value * 100.0, 2);
                     DistanceReady?.Invoke(distanceMeters);
 
-                    var (hasShort, hasOver, bestAimLabel, secondItem, impactTime) = _computeSolutions(distanceMeters, pinScreenY);
+                    var (hasShort, hasOver, bestAimLabel, secondItem, impactTime) =
+                        _computeSolutions(distanceMeters, pinScreenY);
 
-                    // DEBUG: метрики фази 2 — детальні
                     _dbg?.SaveText("phase2_metrics",
                         $"Pin=({pin2.Value.X},{pin2.Value.Y})\n" +
                         $"Marker=({marker2.Value.X},{marker2.Value.Y})\n" +
@@ -407,7 +434,6 @@ public sealed class AutoMortarRunner : IDisposable
                         $"ImpactTime={impactTime:F3}\n" +
                         $"Short={hasShort}, Over={hasOver}");
 
-                    // Озвучка тільки числа прицілу
                     var aimNumber = ExtractAimNumber(bestAimLabel);
                     if (aimNumber.HasValue)
                         await SpeakAsync(aimNumber.Value.ToString());
@@ -418,30 +444,29 @@ public sealed class AutoMortarRunner : IDisposable
                     if (!isBestGreen && !string.IsNullOrEmpty(secondItem))
                     {
                         var secondLower = secondItem.ToLowerInvariant();
-                        if (secondLower.Contains("short"))
-                            BeepLow();
-                        else if (secondLower.Contains("overshoot"))
-                            BeepHigh();
+                        if (secondLower.Contains("short")) BeepLow();
+                        else if (secondLower.Contains("overshoot")) BeepHigh();
                     }
                 }
 
-                // ===== Сумарні метрики по сесії
+                // ===================================================
+                //  Метрики сесії
+                // ===================================================
                 totalSw.Stop();
                 _dbg?.SaveText("metrics_summary",
                     $"DetNo={detNo}\n" +
-                    $"Pin={desiredPinColor}\nMarker={desiredMarkerColor}\n" +
+                    $"Pin={pinClassName}\nPlayer={playerClassName}\n" +
                     $"Setup={setupMs}ms\n" +
                     $"Phase1: iters={p1Iters}\n" +
                     $"  {Stat("P1 Screenshot", p1ScrMs)}\n" +
-                    $"  {Stat("P1 PinDetect", p1PinMs)}\n" +
-                    $"  {Stat("P1 LoopWork", p1LoopMs)}\n" +
+                    $"  {Stat("P1 YOLO", p1YoloMs)}\n" +
+                    $"  {Stat("P1 Loop", p1LoopMs)}\n" +
                     $"Phase2: iters={p2Iters}\n" +
                     $"  {Stat("P2 Screenshot", p2ScrMs)}\n" +
                     $"  {Stat("P2 GridDetect", p2GridMs)}\n" +
-                    $"  {Stat("P2 PinDetect", p2PinMs)}\n" +
-                    $"  {Stat("P2 MarkerDetect", p2MarkerMs)}\n" +
-                    $"  {Stat("P2 OverlayBuild", p2OverlayMs)}\n" +
-                    $"  {Stat("P2 LoopWork", p2LoopMs)}\n" +
+                    $"  {Stat("P2 YOLO", p2YoloMs)}\n" +
+                    $"  {Stat("P2 Overlay", p2OverlayMs)}\n" +
+                    $"  {Stat("P2 Loop", p2LoopMs)}\n" +
                     $"TotalDetectionTime={totalSw.ElapsedMilliseconds}ms\n");
 
                 Status?.Invoke("[AUTO] Done.");
@@ -450,29 +475,18 @@ public sealed class AutoMortarRunner : IDisposable
             catch (Exception ex)
             {
                 Status?.Invoke($"[AUTO] ERROR: {ex.Message}");
+                _dbg?.SaveText("error", $"{ex}");
             }
         }, token);
     }
 
-    public void Stop()
-    {
-        if (_cts == null) return;
-        try { _cts.Cancel(); } catch { }
-        _cts.Dispose();
-        _cts = null;
-    }
+    // ==========================================================
+    //  Helpers
+    // ==========================================================
 
-    // ===== Helpers =====
-
-    private static void BeepHigh()
-    { _ = Task.Run(() => Console.Beep(1200, 120)); }
-
-    // C) Звуки та TTS
-    private static void BeepLow()
-    { _ = Task.Run(() => Console.Beep(400, 120)); }
-
-    private static void BeepMid()
-    { _ = Task.Run(() => Console.Beep(800, 90)); }
+    private static void BeepHigh() => Task.Run(() => Console.Beep(1200, 120));
+    private static void BeepLow() => Task.Run(() => Console.Beep(400, 120));
+    private static void BeepMid() => Task.Run(() => Console.Beep(800, 90));
 
     private static Rectangle BuildCentralStrip(int w, int h, double topCut, double sideCut)
     {
@@ -483,39 +497,77 @@ public sealed class AutoMortarRunner : IDisposable
         return new Rectangle(x, y, Math.Max(1, ww), Math.Max(1, hh));
     }
 
+    /// <summary>
+    /// Малює всі YOLO-предікції на зображенні для дебагу.
+    /// Замінює Reporter.DrawDetectionsOnImage + DrawMarkersForDebug.
+    /// </summary>
+    private static void DrawYoloPredictions(Mat img, List<YoloPrediction> predictions)
+    {
+        if (predictions == null || predictions.Count == 0) return;
+
+        foreach (var pred in predictions)
+        {
+            // Колір рамки залежить від типу
+            MCvScalar color;
+            if (pred.ClassName.StartsWith("pin_"))
+                color = new MCvScalar(0, 0, 255);       // червоний для пінів
+            else if (pred.ClassName.StartsWith("player_"))
+                color = new MCvScalar(255, 200, 0);     // блакитний для гравців
+            else
+                color = new MCvScalar(200, 200, 200);   // сірий для невідомого
+
+            // Рамка
+            CvInvoke.Rectangle(img, pred.BoundingBox, color, 2);
+
+            // Точка прив'язки: BottomTip для пінів, Center для гравців
+            Point anchor = pred.ClassName.StartsWith("pin_")
+                ? pred.BottomTip
+                : pred.Center;
+            CvInvoke.Circle(img, anchor, 4, color, -1);
+
+            // Підпис
+            string label = $"{pred.ClassName} {pred.Confidence:F2}";
+            var textOrg = new Point(pred.BoundingBox.X, Math.Max(15, pred.BoundingBox.Y - 5));
+            CvInvoke.PutText(img, label, textOrg, FontFace.HersheySimplex, 0.45,
+                new MCvScalar(0, 0, 0), 2, LineType.AntiAlias);
+            CvInvoke.PutText(img, label, textOrg, FontFace.HersheySimplex, 0.45,
+                color, 1, LineType.AntiAlias);
+        }
+    }
+
     private int DetectLeftPanelCutByDilatedBlack(Mat matFull)
     {
-        // 1) ROI: ліва частина кадру, без верх/низ “шапки”
+        // -- Без змін — ця логіка не залежить від детектора --
         int w = matFull.Width;
         int h = matFull.Height;
 
-        int xMax = Math.Max(1, (int)Math.Round(w * 0.48));      // шукати панель тільки в лівій половині
-        int yPad = Math.Max(2, (int)Math.Round(h * 0.02));      // відрізати 2% зверху/знизу
+        int xMax = Math.Max(1, (int)Math.Round(w * 0.48));
+        int yPad = Math.Max(2, (int)Math.Round(h * 0.02));
         var roiRect = new Rectangle(0, yPad, xMax, Math.Max(1, h - 2 * yPad));
         if (roiRect.Width <= 0 || roiRect.Height <= 0) return 0;
 
         using var roi = new Mat(matFull, roiRect);
 
-        // 2) Маска "майже чорних" (0..18) у BGR
         using var mask = new Mat();
-        CvInvoke.InRange(
-            roi,
+        CvInvoke.InRange(roi,
             new ScalarArray(new MCvScalar(0, 0, 0)),
             new ScalarArray(new MCvScalar(18, 18, 18)),
             mask);
 
-        // 3) Морфологія
         int kVert = Math.Max(9, h / 40);
-        if ((kVert & 1) == 0) kVert++; // зробимо непарним
-        using var kernelClose = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(3, kVert), new Point(-1, -1));
+        if ((kVert & 1) == 0) kVert++;
+        using var kernelClose = CvInvoke.GetStructuringElement(
+            MorphShapes.Rectangle, new Size(3, kVert), new Point(-1, -1));
         using var maskClosed = new Mat();
-        CvInvoke.MorphologyEx(mask, maskClosed, MorphOp.Close, kernelClose, new Point(-1, -1), 1, BorderType.Reflect, default);
+        CvInvoke.MorphologyEx(mask, maskClosed, MorphOp.Close, kernelClose,
+            new Point(-1, -1), 1, BorderType.Reflect, default);
 
-        using var kernelOpen = CvInvoke.GetStructuringElement(MorphShapes.Rectangle, new Size(3, 3), new Point(-1, -1));
+        using var kernelOpen = CvInvoke.GetStructuringElement(
+            MorphShapes.Rectangle, new Size(3, 3), new Point(-1, -1));
         using var maskClean = new Mat();
-        CvInvoke.MorphologyEx(maskClosed, maskClean, MorphOp.Open, kernelOpen, new Point(-1, -1), 1, BorderType.Reflect, default);
+        CvInvoke.MorphologyEx(maskClosed, maskClean, MorphOp.Open, kernelOpen,
+            new Point(-1, -1), 1, BorderType.Reflect, default);
 
-        // 4) Для кожної колонки рахуємо кількість чорних пікселів
         using var maskImg = maskClean.ToImage<Gray, byte>();
         int rw = maskImg.Width;
         int rh = maskImg.Height;
@@ -526,11 +578,9 @@ public sealed class AutoMortarRunner : IDisposable
             for (int x = 0; x < rw; x++)
                 if (data[y, x, 0] != 0) colCnt[x]++;
 
-        // 5) Пошук правої межі чорної “стіни”
-        double hiThr = rh * 0.94; // "майже повністю чорна" колонка
+        double hiThr = rh * 0.94;
         double lowThr = rh * 0.20;
 
-        // Знайдемо крайню праву "дуже чорну" колонку
         int lastHi = -1;
         for (int x = 0; x < rw; x++)
             if (colCnt[x] >= hiThr) lastHi = x;
@@ -541,7 +591,7 @@ public sealed class AutoMortarRunner : IDisposable
             return 0;
         }
 
-        int win = Math.Max(4, w / 900); // невеличке вікно перевірки
+        int win = Math.Max(4, w / 900);
         int candidate = lastHi;
 
         for (int x = lastHi; x <= rw - win - 1; x++)
@@ -549,12 +599,7 @@ public sealed class AutoMortarRunner : IDisposable
             int below = 0;
             for (int j = 0; j < win; j++)
                 if (colCnt[x + j] <= lowThr) below++;
-
-            if (below == win)
-            {
-                candidate = x;
-                break;
-            }
+            if (below == win) { candidate = x; break; }
         }
 
         int leftBand = 0;
@@ -569,41 +614,25 @@ public sealed class AutoMortarRunner : IDisposable
         if (!looksLikePanel)
         {
             _dbg?.SaveMat(maskClean, "leftpanel_mask_clean_lowconf");
-            return 0; // низька впевненість — не ріжемо
+            return 0;
         }
 
         int leftCut = roiRect.X + candidate;
         leftCut = Math.Clamp(leftCut, 0, (int)(w * 0.47));
 
-        // Debug
         if (_dbg != null)
         {
             _dbg.SaveMat(mask, "leftpanel_mask_initial");
             _dbg.SaveMat(maskClean, "leftpanel_mask_clean");
             using var overlay = matFull.Clone();
-            CvInvoke.Line(overlay, new Point(leftCut, 0), new Point(leftCut, h - 1), new MCvScalar(0, 255, 255), 2);
+            CvInvoke.Line(overlay, new Point(leftCut, 0), new Point(leftCut, h - 1),
+                new MCvScalar(0, 255, 255), 2);
             _dbg.SaveMat(overlay, "leftpanel_cut_overlay");
-            _dbg.SaveText("leftpanel_notes", $"roi=({roiRect.X},{roiRect.Y},{roiRect.Width},{roiRect.Height}), leftCut={leftCut}");
+            _dbg.SaveText("leftpanel_notes",
+                $"roi=({roiRect.X},{roiRect.Y},{roiRect.Width},{roiRect.Height}), leftCut={leftCut}");
         }
 
         return leftCut;
-    }
-
-    private static void DrawMarkersForDebug(Mat img, LiveDetections dets)
-    {
-        if (dets?.markers == null || dets.markers.Count == 0) return;
-
-        foreach (var m in dets.markers)
-        {
-            var color = Utils.BgrScalarFromColorName(m.Color);
-            var p = new Point(m.X, m.Y);
-
-            CvInvoke.Circle(img, p, 6, color, 2);
-            string label = $"{m.Type} {m.Color} * {m.Score:0.00}";
-            var org = new Point(p.X + 8, Math.Max(15, p.Y - 8));
-            CvInvoke.PutText(img, label, org, FontFace.HersheySimplex, 0.5, new MCvScalar(0, 0, 0), 2);
-            CvInvoke.PutText(img, label, org, FontFace.HersheySimplex, 0.5, color, 1);
-        }
     }
 
     private static void EnsureBgr(ref Mat mat)
@@ -624,21 +653,22 @@ public sealed class AutoMortarRunner : IDisposable
         }
     }
 
-    // Парсимо лише числове значення прицілу для TTS
     private static int? ExtractAimNumber(string bestAimLabel)
     {
         if (string.IsNullOrWhiteSpace(bestAimLabel)) return null;
         var matches = Regex.Matches(bestAimLabel, @"\d+");
         if (matches.Count == 0) return null;
-        if (int.TryParse(matches[^1].Value, out int v))
-            return v;
-        return null;
+        return int.TryParse(matches[^1].Value, out int v) ? v : null;
     }
 
     private Task SpeakAsync(string text)
     {
         var tcs = new TaskCompletionSource<object>();
-        void handler(object s, SpeakCompletedEventArgs e) { _tts.SpeakCompleted -= handler; tcs.TrySetResult(null); }
+        void handler(object s, SpeakCompletedEventArgs e)
+        {
+            _tts.SpeakCompleted -= handler;
+            tcs.TrySetResult(null);
+        }
         _tts.SpeakCompleted += handler;
         _tts.SpeakAsync(text);
         return tcs.Task;

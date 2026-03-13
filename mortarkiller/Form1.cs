@@ -1,4 +1,10 @@
-﻿using System;
+﻿using Emgu.CV;
+using Emgu.CV.Structure;
+using PUBGVisionTest.Core.Capture;
+using PUBGVisionTest.Core.Detection;
+using PUBGVisionTest.Core.Helpers;
+using PUBGVisionTest.Core.Yolo;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -147,7 +153,7 @@ public partial class Form1 : Form
         { 455, "700"},
     };
     private DetectorParams? _gridParams;
-    private YoloDetector? _yoloDetector;
+    private MortarYoloAdapter? _yoloDetector;
     private AutoMortarRunner? _auto;
 
     // TTS для ручного режиму
@@ -232,27 +238,33 @@ public partial class Form1 : Form
         //example path
 
         // За замовчуванням вибираємо "1" (жовтий)
-        if (rbMarker1 != null) rbMarker1.Checked = true;
+        rbMarker1?.Checked = true;
 
         InitDetectors();
 
-        if (_yoloDetector != null && _gridParams != null)
+        if (_yoloDetector != null)
         {
+            var config = new AutoMortarConfig
+            {
+                ProcessName = "TslGame",
+                IntervalMs = 200,
+                CropTopPercent = 0.08,
+                CropSidePercent = 0.47,
+                EnableDebug = true
+            };
+
             _auto = new AutoMortarRunner(
-                processName: "TslGame",
+                config: config,
                 yoloDetector: _yoloDetector,
                 gridParams: _gridParams,
-                computeSolutions: ComputeSolutionsAndUpdateUI,
-                intervalMs: 200,
-                cropTopPercent: 0.08,
-                cropSidePercent: 0.47,
-                enableDebug: true); // <-- увімкнути дамп
+                computeSolutions: ComputeSolutionsAndUpdateUI);
 
             // Підписка на події — оновлення UI
             _auto.Status += s => BeginInvoke((MethodInvoker)(() => listView1.Items.Add(s)));
-            _auto.DistanceReady += m => BeginInvoke((MethodInvoker)(() => label4.Text = m.ToString("#.##")));
-            _auto.PxPer100Ready += v => BeginInvoke((MethodInvoker)(() => { /* можна показати десь */ }));
-            _auto.PairFound += (pin, marker) => { /* опційно: намалювати/лог */ };
+            _auto.DistanceReady += m => BeginInvoke((MethodInvoker)(() =>
+                label4.Text = m.ToString("#.##")));
+            _auto.PxPer100Ready += v => BeginInvoke((MethodInvoker)(() => { }));
+            _auto.PairFound += (pin, marker) => { };
         }
     }
 
@@ -826,33 +838,26 @@ public partial class Form1 : Form
     {
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
-        // -- Grid params (автокореляційний детектор сітки — без змін) --
-        string gridParamsPath = Path.Combine(baseDir, "grid_params.json");
-        if (File.Exists(gridParamsPath))
-        {
-            _gridParams = JsonSerializer.Deserialize<DetectorParams>(
-                File.ReadAllText(gridParamsPath), JsonOptions());
-        }
-        else
-        {
-            _gridParams = new DetectorParams(); // дефолтні параметри
-            Debug.WriteLine("[INIT] grid_params.json not found, using defaults");
-        }
+        _gridParams = new DetectorParams(); // дефолтні параметри
 
-        // -- YOLO модель (один файл замість купи JSON+масок) --
+        // -- YOLO --
         string modelPath = Path.Combine(baseDir, "best.onnx");
         if (File.Exists(modelPath))
         {
             try
             {
-                _yoloDetector = new YoloDetector(
+                _yoloDetector = new MortarYoloAdapter(
                     modelPath: modelPath,
                     labels: YoloLabels,
-                    yoloVersion: YoloVersion.V10,
-                    imgsz: 1920,
+                    yoloVersion: YoloVersion.V8_V11,
+                    imgsz: 640,
                     confThreshold: 0.5f,
                     nmsThreshold: 0.4f,
                     useGpu: true);
+
+                using var dummy = new Mat(64, 64, Emgu.CV.CvEnum.DepthType.Cv8U, 3);
+                dummy.SetTo(new MCvScalar(128, 128, 128));
+                _yoloDetector.Detect(dummy);
 
                 Debug.WriteLine("[INIT] YoloDetector loaded OK");
             }

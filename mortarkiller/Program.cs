@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Windows.Forms;
-using WinFormsApp1;
 
 namespace mortarkiller;
 
